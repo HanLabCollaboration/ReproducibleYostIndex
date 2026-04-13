@@ -55,7 +55,7 @@ tidycensus::census_api_key("YOUR_KEY_HERE", install = TRUE)
 library(ReproduceYost)
 
 yost_ca <- computeYostIndex(
-  geo    = "tract",   # "county", "tract", or "block group"
+  geo    = "tract",   # "state","county", "tract", or "block group"
   year   = 2022,      # ACS 5-year survey year (>= 2011)
   states = "CA",      # state abbreviation(s), or "all"
   scope  = "state",   # "national", "state", or "county"
