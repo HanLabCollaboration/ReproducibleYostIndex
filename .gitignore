@@ -1,0 +1,16 @@
+.Rproj.user
+.Rhistory
+.Rdata
+.httr-oauth
+.vscode
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+inst/doc
+
+# ignore the editing_details
+editing_details.R

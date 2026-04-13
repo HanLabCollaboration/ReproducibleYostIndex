@@ -1,0 +1,391 @@
+---
+title: "Introduction to ReproduceYost"
+author: " Rafael Catoia Pulgrossi | [QSU](https://med.stanford.edu/qsu 'View website') | [Tae Yoon Lee](https://profiles.stanford.edu/tae-yoon-lee 'View website') | [Summer Han](https://med.stanford.edu/summerhanlab.html 'View website')"
+date: today
+format:
+  html:
+    self-contained: true
+    theme: united 
+    toc: true
+    toc-expand: 4
+    toc-depth: 4
+    code-fold: true
+    toc-title: 'Contents'
+    page-layout: full
+    grid:
+      body-width: 1440px
+      gutter-width: 1.5rem
+execute:
+  freeze: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## Social Determinants of Health
+
+Social determinants of health (SDOH) are the conditions in which people are born, grow, live, work, and age. These circumstances are shaped by the distribution of money, power, and resources at global, national, and local levels. Research has consistently shown that SDOH have a profound impact on health outcomes, often accounting for more variation in health than medical care alone.
+
+Key domains of SDOH include:
+
+- **Economic Stability**: Employment, income, expenses, debt, and financial support
+- **Education Access and Quality**: Educational attainment, literacy, language, and early childhood education
+- **Healthcare Access and Quality**: Insurance coverage, access to primary care, and health literacy
+- **Neighborhood and Built Environment**: Housing quality, transportation, safety, parks, and walkability
+- **Social and Community Context**: Social cohesion, civic participation, discrimination, and incarceration
+
+Understanding and measuring SDOH is critical for health research and intervention. Neighborhood-level socioeconomic status (SES) is one of the most important social determinants, as it captures the collective effect of multiple socioeconomic factors that influence health behaviors, access to resources, and exposure to environmental hazards.
+
+## The Yost Index: A Composite Measure of Neighborhood SES
+
+The Yost Index is a validated, composite measure of neighborhood-level socioeconomic status developed by cancer researchers to study the relationship between SES and cancer outcomes (Yost et al., 2001). Unlike single indicators such as median income or poverty rates, the Yost Index combines multiple socioeconomic variables to provide a more comprehensive and nuanced measure of neighborhood disadvantage.
+
+### The Seven Component Variables
+
+The Yost Index is constructed from seven key socioeconomic indicators derived from the U.S. Census Bureau's American Community Survey (ACS):
+
+1. **Median household income** (`income`)
+2. **Percent working class** (`wkcls`): Proportion of employed persons in working-class occupations
+3. **Unemployment rate** (`unemp`): Percent of civilians in the labor force who are unemployed
+4. **Educational attainment** (`educ`): Percent with less than high school education (age 25+)
+5. **Poverty rate** (`poverty150`): Percent of persons below 150% of the federal poverty line
+6. **Median rent** (`rent`): Median gross rent for renter-occupied housing units
+7. **Median home value** (`hval`): Median value of owner-occupied housing units
+
+### How the Yost Index is Calculated
+
+The `ReproduceYost` package automates the entire process of calculating the Yost Index:
+
+1. **Data Retrieval**: Fetches the necessary ACS variables (estimates and margins of error) via the `tidycensus` package
+2. **Variable Calculation**: Computes the seven component variables from raw ACS estimates
+3. **Shrinkage Stabilization** *(optional)*: Reduces small-area estimation noise by pulling unreliable lower-level estimates (e.g., block groups) toward their parent geography (e.g., tract), weighted by sampling variance from the ACS margins of error
+4. **Missing Data Imputation** *(optional)*: Performs spatial imputation for missing values using neighboring geographies
+5. **Standardization**: Rescales variables (by ranking or standardizing) to put them on a comparable scale
+6. **Factor Analysis**: Extracts a single underlying factor representing neighborhood SES
+7. **Quintile Assignment**: Divides the continuous Yost scores into quintiles for easy interpretation
+
+The output always includes a **baseline Yost** (`df_yost_raw`, no shrinkage or imputation) alongside the **requested version** (`df_yost`), so you can directly compare the effect of any stabilization or imputation applied.
+
+The resulting Yost Index is a continuous measure where higher values indicate higher socioeconomic status. Quintiles (1 = lowest SES, 5 = highest SES) provide a categorical version for stratified analyses.
+
+### Why Use the Yost Index?
+
+The Yost Index offers several advantages over simpler SES measures:
+
+- **Comprehensiveness**: Captures multiple dimensions of socioeconomic disadvantage
+- **Validation**: Extensively used in epidemiological research, particularly cancer studies
+- **Comparability**: Standardized approach allows for comparisons across studies and geographic areas
+- **Flexibility**: Can be calculated at various geographic levels (county, tract, block group) and scopes (national, state, county)
+- **Handling Missing Data**: Built-in spatial imputation methods address incomplete data
+- **Small-Area Stabilization**: Optional shrinkage estimation reduces noise in unreliable small-area estimates by borrowing strength from parent geographies, particularly valuable for block group analyses where ACS margins of error can be very large
+
+## Why the Yost Index Matters: A Confounding Example
+
+One of the most important uses of the Yost Index in health research is to control for socioeconomic confounding. Consider a study examining the relationship between environmental exposure (e.g., air pollution) and a health outcome (e.g., asthma prevalence). Both environmental exposures and health outcomes are often strongly associated with neighborhood SES:
+
+- Low-SES neighborhoods may have higher pollution exposure due to proximity to highways, industrial areas, or lack of green space
+- Low-SES neighborhoods may also have higher asthma rates due to factors like housing quality, access to healthcare, stress, and other SDOH
+
+**If we don't account for neighborhood SES, we might incorrectly attribute health effects to environmental exposure when they are actually driven (in whole or in part) by socioeconomic factors.**
+
+Let's demonstrate this with a simulated example using real Yost Index data for California census tracts.
+
+### Setup
+
+First, load the required packages:
+
+```{r setup, message=FALSE, warning=FALSE}
+devtools::load_all() # Load the local version of ReproduceYost for vignette development 
+#library(ReproduceYost) # Load the ReproduceYost package (make sure to install it first)
+library(dplyr)
+library(ggplot2)
+
+# Set seed for reproducibility
+set.seed(42)
+```
+
+### Step 1: Calculate the Yost Index for California
+
+We'll compute the Yost Index for all census tracts in California using the 2022 ACS data. We'll use `scope = "state"` to rank tracts within California and enable imputation to handle missing data.
+
+```{r compute_yost}
+#| warning: false
+#| message: false
+#| results: "hide"
+
+# You'll need a Census API key for this to work
+# Get one free at: https://api.census.gov/data/key_signup.html
+# tidycensus::census_api_key("YOUR_KEY_HERE", install = TRUE)
+yost_ca <- computeYostIndex(
+  geo = "tract",
+  year = 2022,
+  states = "CA",
+  scope = "state",
+  impute = TRUE,
+  keep_geometry = FALSE,
+  return_format = "detailed"
+)
+
+# Extract the main data frame (requested version — Yost, no shrink, with impute)
+df_ca <- yost_ca$df_yost
+```
+
+Now we have the actual Yost Index values for all census tracts in California. The Yost scores typically range from about 8 to 12, with higher values indicating higher socioeconomic status. Let's visualize the spatial distribution of the Yost Index across California:
+
+```{r display_yost}
+#| fig-align: "center"
+#| fig-width: 8
+#| fig-height: 5
+
+# Join the geometry with the Yost Index data
+# df_yost contains the requested version (YostImputed here, since impute = TRUE)
+df_ca_plot <- yost_ca$df_geometry |>
+  dplyr::left_join(yost_ca$df_yost, by = "GEOID")
+
+# Create a choropleth map showing the continuous Yost Index
+ggplot(df_ca_plot) +
+  # geom_sf creates the map; we fill by YostImputed (impute = TRUE was used)
+  geom_sf(aes(fill = YostImputed), color = 'white', size = 0.05) +
+  # Use a continuous color scale (viridis plasma) for the Yost Index
+  scale_fill_viridis_c(
+    option = "plasma",
+    name = "Yost Index",
+    guide = guide_colorbar(
+      barwidth = 1,
+      barheight = 15,
+      title.position = "top",
+      title.hjust = 0.5
+    )
+  ) +
+  # Add informative labels
+  labs(
+    title = "Neighborhood Socioeconomic Status in California",
+    subtitle = "Yost Index | 2022 ACS 5-Year Estimates",
+    caption = "Higher values indicate higher socioeconomic status"
+  ) +
+  # theme_void removes axes and grid for a clean map appearance
+  theme_void() +
+  theme(
+    plot.title = element_text(face = "bold", size = 16, hjust = 0.5),
+    plot.subtitle = element_text(size = 12, hjust = 0.5, color = "grey30"),
+    plot.caption = element_text(size = 9, hjust = 0.5, color = "grey50", margin = margin(t = 10)),
+    legend.position = "right",
+    plot.margin = margin(20, 20, 20, 20)
+  )
+```
+
+### Step 2: Simulate an Environmental Exposure
+
+Now, let's simulate an environmental exposure (e.g., air pollution PM2.5 levels) that is correlated with neighborhood SES. Lower-SES neighborhoods tend to have higher exposure due to proximity to highways, industrial areas, and other pollution sources:
+
+```{r simulate_exposure}
+# Simulate pollution exposure (higher in low-SES neighborhoods)
+# The Yost Index is scaled so higher = higher SES (range 8-12)
+# We'll create pollution that decreases as Yost increases
+
+df_ca <- df_ca %>%
+  mutate(
+    # Base pollution inversely related to Yost quintile + random variation
+    # Q1 (lowest SES) has highest pollution, Q5 (highest SES) has lowest
+    pollution_base = 14 - 1.2 * as.numeric(YostImputedQuintile) + rnorm(n(), mean = 0, sd = 1.5),
+    # Ensure realistic PM2.5 values (typically 5-20 µg/m³ in CA)
+    pollution = pmax(pollution_base, 5)
+  )
+```
+
+### Step 3: Simulate a Health Outcome
+
+Next, we simulate asthma prevalence in children. Crucially, we'll make asthma depend on **both** pollution exposure **and** neighborhood SES (through pathways other than pollution, such as housing quality, healthcare access, and stress):
+
+```{r simulate_outcome}
+# Simulate childhood asthma prevalence (%)
+# True model: asthma is caused by BOTH pollution AND low SES
+
+# Define the true effects by quintile
+# Q1 = lowest SES (highest risk), Q5 = highest SES (lowest risk)
+ses_effect <- c(8.0, 5.0, 3.0, 1.5, 0)  # % increase in asthma by quintile
+pollution_effect <- 0.4  # 0.4% increase per µg/m³ of PM2.5
+
+df_ca <- df_ca %>%
+  mutate(
+    # Baseline asthma rate + SES effect + pollution effect + random variation
+    asthma_pct =
+      6.5 +                                               # Baseline (Q5, no pollution)
+      ses_effect[YostImputedQuintile] +                   # SES effect by quintile
+      pollution_effect * (pollution - 8) +                # Pollution effect (centered at 8)
+      rnorm(n(), mean = 0, sd = 1.2),                     # Random noise
+
+    # Keep asthma rates realistic (0-25%)
+    asthma_pct = pmax(pmin(asthma_pct, 25), 0)
+  )
+```
+
+In this simulation, the **true causal structure** is:
+
+- **SES effect**: Children in Q1 (lowest SES) have 8% higher asthma rates than Q5 (highest SES), independent of pollution
+- **Pollution effect**: Each 1 µg/m³ increase in PM2.5 increases asthma by 0.4%, independent of SES
+- **Confounding**: Low-SES neighborhoods (Q1) have ~6 µg/m³ more pollution than high-SES neighborhoods (Q5)
+
+### Step 4: Visualize the Confounding Structure
+
+Before running models, let's visualize how pollution varies by SES quintile:
+
+```{r confounding_viz, fig.width=8, fig.height=5}
+# Calculate mean pollution and asthma by quintile
+quintile_summary <- df_ca %>%
+  group_by(YostImputedQuintile) %>%
+  summarise(
+    mean_pollution = mean(pollution),
+    mean_asthma = mean(asthma_pct),
+    .groups = "drop"
+  )
+
+# Create side-by-side plots
+p1 <- ggplot(quintile_summary, aes(x = factor(YostImputedQuintile), y = mean_pollution)) +
+  geom_col(fill = "coral") +
+  labs(
+    title = "Pollution by SES Quintile",
+    x = "Yost Quintile\n(1=Lowest SES, 5=Highest SES)",
+    y = "Mean PM2.5 (µg/m³)"
+  ) +
+  theme_minimal()
+
+p2 <- ggplot(quintile_summary, aes(x = factor(YostImputedQuintile), y = mean_asthma)) +
+  geom_col(fill = "steelblue") +
+  labs(
+    title = "Asthma by SES Quintile",
+    x = "Yost Quintile\n(1=Lowest SES, 5=Highest SES)",
+    y = "Mean Asthma Rate (%)"
+  ) +
+  theme_minimal()
+
+gridExtra::grid.arrange(p1, p2, ncol = 2)
+```
+
+**Key observation**: Both pollution exposure AND asthma rates are higher in lower-SES neighborhoods. This is the confounding structure we need to account for.
+
+### Step 5: Naive Analysis (Without Adjusting for SES)
+
+Let's first examine the relationship between pollution and asthma **without** controlling for neighborhood SES:
+
+```{r naive_analysis}
+# Naive model: asthma ~ pollution only
+model_naive <- lm(asthma_pct ~ pollution, data = df_ca)
+summary(model_naive)
+
+# Extract the coefficient for pollution
+coef_naive <- coef(model_naive)["pollution"]
+```
+
+```{r naive_plot, fig.width=7, fig.height=5}
+ggplot(df_ca, aes(x = pollution, y = asthma_pct)) +
+  geom_point(alpha = 0.2, size = 0.8, color = "gray40") +
+  geom_smooth(method = "lm", color = "red", se = TRUE, linewidth = 1.2) +
+  labs(
+    title = "Naive Analysis: Pollution vs. Asthma",
+    subtitle = "Without adjusting for neighborhood SES (CONFOUNDED)",
+    x = "PM2.5 Pollution (µg/m³)",
+    y = "Childhood Asthma Prevalence (%)"
+  ) +
+  theme_minimal() +
+  annotate("text", x = 16, y = 5,
+           label = paste0("Slope = ", round(coef_naive, 3), " %/µg/m³"),
+           color = "red", size = 4.5, fontface = "bold")
+```
+
+**Observation**: The naive estimate is **`r round(coef_naive, 3)`** %/µg/m³, which is substantially higher than the true effect (0.4 %/µg/m³). This overestimate occurs because the model confounds the effect of pollution with the effect of low SES.
+
+### Step 6: Adjusted Analysis Using Yost Quintiles
+
+Now, let's re-run the analysis while **stratifying by or adjusting for Yost quintiles**:
+
+```{r adjusted_analysis}
+# Model 1: Adjust for quintiles as categorical variable
+model_quintiles <- lm(asthma_pct ~ pollution + factor(YostImputedQuintile), data = df_ca)
+summary(model_quintiles)
+
+# Extract coefficients
+coef_adjusted <- coef(model_quintiles)["pollution"]
+```
+
+```{r adjusted_plot, fig.width=8, fig.height=6}
+# Plot pollution vs asthma, colored by quintile
+ggplot(df_ca, aes(x = pollution, y = asthma_pct, color = factor(YostImputedQuintile))) +
+  geom_point(alpha = 0.3, size = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, linewidth = 1) +
+  scale_color_viridis_d(
+    name = "Yost Quintile",
+    labels = c("Q1 (Lowest SES)", "Q2", "Q3", "Q4", "Q5 (Highest SES)")
+  ) +
+  labs(
+    title = "Adjusted Analysis: Pollution vs. Asthma by SES Quintile",
+    subtitle = "Controlling for neighborhood SES reveals the true pollution effect",
+    x = "PM2.5 Pollution (µg/m³)",
+    y = "Childhood Asthma Prevalence (%)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+**Result**: After adjusting for Yost quintiles, the estimated pollution effect is **`r round(coef_adjusted, 3)`** %/µg/m³, very close to the true value of 0.4 %/µg/m³.
+
+### Step 7: Compare Estimates
+
+Let's create a table and visualization comparing the naive vs. adjusted estimates:
+
+```{r comparison_table}
+# Create comparison table
+comparison <- tibble(
+  Model = c("Naive (Unadjusted)", "Adjusted for Yost Quintiles", "True Effect"),
+  `Pollution Effect (% per µg/m³)` = c(coef_naive, coef_adjusted, 0.4)
+)
+
+knitr::kable(comparison, digits = 3, caption = "Comparison of Pollution Effect Estimates")
+```
+
+```{r comparison_plot, fig.width=7, fig.height=5}
+ggplot(comparison, aes(x = Model, y = `Pollution Effect (% per µg/m³)`)) +
+  geom_col(aes(fill = Model), width = 0.6) +
+  geom_hline(yintercept = 0.4, linetype = "dashed", color = "darkgreen", linewidth = 1.2) +
+  scale_fill_manual(values = c(
+    "Naive (Unadjusted)" = "coral",
+    "Adjusted for Yost Quintiles" = "steelblue",
+    "True Effect" = "darkgreen"
+  )) +
+  labs(
+    title = "Effect of PM2.5 on Childhood Asthma: Naive vs. Adjusted",
+    subtitle = "Adjusting for Yost quintiles controls for socioeconomic confounding",
+    y = "Effect Size (% increase per µg/m³)",
+    x = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 0, hjust = 0.5)
+  )
+```
+
+### Key Takeaways
+
+This simulation demonstrates a critical point for observational health research:
+
+1. **Environmental exposures and health outcomes are often both associated with neighborhood SES**
+2. **Failing to account for SES leads to confounded estimates** (in this case, overestimating the pollution effect)
+3. **The Yost Index provides a comprehensive, validated measure of neighborhood SES** that can be used to adjust for socioeconomic confounding
+4. **After adjustment, we obtain a more accurate estimate** of the true causal effect of the exposure on the outcome
+
+In real-world studies, the Yost Index can be used in regression models, propensity score methods, or stratified analyses to account for the complex role of neighborhood socioeconomic context in shaping health outcomes.
+
+## Conclusion
+
+Social determinants of health are fundamental drivers of health disparities. The Yost Index provides a robust, validated tool for measuring neighborhood socioeconomic status in health research. The `ReproduceYost` package makes it easy to calculate the Yost Index from ACS data, handle missing values through spatial imputation, and integrate this important measure into your analyses.
+
+Whether you're studying environmental health, cancer epidemiology, health services research, or any field where neighborhood context matters, `ReproduceYost` provides a streamlined, reproducible workflow for incorporating socioeconomic context into your work.

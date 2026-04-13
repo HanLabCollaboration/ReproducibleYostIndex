@@ -1,0 +1,329 @@
+---
+title: "ReproduceYost Walkthrough: Computing the Yost Index"
+author: " Rafael Catoia Pulgrossi | [QSU](https://med.stanford.edu/qsu 'View website') | [Tae Yoon Lee](https://profiles.stanford.edu/tae-yoon-lee 'View website') | [Summer Han](https://med.stanford.edu/summerhanlab.html 'View website')"
+date: today
+format:
+  html:
+    self-contained: true
+    theme: united 
+    toc: true
+    toc-expand: 4
+    toc-depth: 4
+    code-fold: true
+    toc-title: 'Contents'
+    page-layout: full
+    grid:
+      body-width: 1440px
+      gutter-width: 1.5rem
+execute:
+  freeze: true
+editor_options: 
+  chunk_output_type: console
+---
+
+## Getting Started with ReproduceYost
+
+```{r}
+#| include: false
+devtools::load_all()
+library(ggplot2)
+library(dplyr)
+library(sf)
+```
+
+### Installation
+
+You can install the development version of `ReproduceYost` from GitHub:
+
+```r
+# install.packages("devtools")
+devtools::install_github("HanLabCollaboration/ReproduceYost")
+```
+
+### Census API Key
+
+To use `ReproduceYost`, you'll need a free Census API key:
+
+```r
+# 1. Get a key at: https://api.census.gov/data/key_signup.html
+# 2. Install it for use with tidycensus:
+tidycensus::census_api_key("YOUR_KEY_HERE", install = TRUE)
+```
+
+### Basic Usage
+
+The main function is `computeYostIndex()`:
+
+```{r basic_example}
+#| eval: true
+#| results: hide
+#| message: false
+#| warning: false
+
+# Compute Yost Index for California census tracts (2022 ACS)
+yost_results <- computeYostIndex(
+  geo = "tract",           # Geography: "county", "tract", or "block group"
+  year = 2022,             # ACS 5-year survey year
+  states = "CA",           # State(s) to analyze
+  scope = "state",         # Ranking scope: "national", "state", or "county"
+  impute = TRUE,           # Spatially impute missing values
+  keep_geometry = TRUE,    # Include spatial geometries for mapping
+  return_format = "detailed"  # Return detailed results
+)
+```
+
+```{r show_results}
+#| eval: true
+
+head(yost_results$df_yost)
+```
+
+### Understanding the Output
+
+When using `return_format = "detailed"`, the function returns a list with:
+
+- `df_yost_raw`: **Baseline** Yost score (no shrinkage, no imputation) — always present for comparison
+- `df_yost`: **Requested** Yost score, named dynamically based on the parameters used:
+  - `Yost` / `YostQuintile` — when `shrink = FALSE` and `impute = FALSE`
+  - `YostImputed` / `YostImputedQuintile` — when `impute = TRUE`
+  - `YostShrunk` / `YostShrunkQuintile` — when `shrink = TRUE`
+  - `YostShrunkImputed` / `YostShrunkImputedQuintile` — when both are `TRUE`
+- `df_raw_values`: Raw ACS values (estimates and margins of error) before any processing
+- `df_geometry`: Spatial geometry (if `keep_geometry = TRUE`)
+- `df_imputed`: Variable values after imputation
+- `df_rank`: Ranked/standardized variables used in factor analysis
+- `obj_factor`: Factor analysis object(s) from `psych::fa`
+
+For simpler use cases, set `return_format = "minimal"` to get just the GEOID, Yost score, and quintile.
+
+### Key Parameters
+
+- **`geo`**: Geographic level (`"county"`, `"tract"`, or `"block group"`)
+- **`year`**: ACS 5-year survey year (≥ 2011)
+- **`states`**: State abbreviations (e.g., `"CA"`, `c("CA", "NY")`, or `"all"`)
+- **`scope`**: Comparison scope
+  - `"national"`: Rank all geographies against each other (nationwide)
+  - `"state"`: Rank within each state separately
+  - `"county"`: Rank within each county separately
+- **`shrink`**: Whether to apply shrinkage stabilization (see [Shrinkage Stabilization] below)
+- **`impute`**: Whether to perform spatial imputation for missing data (recommended: `TRUE`)
+- **`keep_geometry`**: Whether to include spatial geometries for mapping
+
+## Visualizing the Yost Index
+
+The Yost Index is inherently spatial, making it ideal for mapping. Let's create a map showing Yost quintiles across California.
+
+### Creating a Map
+
+To create maps, we need to compute the Yost Index with `keep_geometry = TRUE`. We'll use the results from our earlier computation:
+
+```{r map_ca}
+#| eval: true
+#| fig-align: "center"
+#| fig-width: 8
+#| fig-height: 5
+
+# Join the geometry with the Yost Index data
+# We use left_join to preserve all geometries and add Yost scores to each tract
+df_ca_plot <- yost_results$df_geometry |>
+  dplyr::left_join(yost_results$df_yost, by = "GEOID")
+
+# Create a choropleth map showing the continuous Yost Index
+ggplot(df_ca_plot) +
+  # geom_sf creates the map; we fill by Yost value and use thin white borders
+  geom_sf(aes(fill = YostImputed), color = 'white', size = 0.05) +
+  # Use a continuous color scale (viridis plasma) for the Yost Index
+  scale_fill_viridis_c(
+    option = "plasma",
+    name = "Yost Index",
+    guide = guide_colorbar(
+      barwidth = 1,
+      barheight = 15,
+      title.position = "top",
+      title.hjust = 0.5
+    )
+  ) +
+  # Add informative labels
+  labs(
+    title = "Neighborhood Socioeconomic Status in California",
+    subtitle = "Yost Index | 2022 ACS 5-Year Estimates",
+    caption = "Higher values indicate higher socioeconomic status"
+  ) +
+  # theme_void removes axes and grid for a clean map appearance
+  theme_void() +
+  theme(
+    plot.title = element_text(face = "bold", size = 16, hjust = 0.5),
+    plot.subtitle = element_text(size = 12, hjust = 0.5, color = "grey30"),
+    plot.caption = element_text(size = 9, hjust = 0.5, color = "grey50", margin = margin(t = 10)),
+    legend.position = "right",
+    plot.margin = margin(0, 0, 0, 0)
+  )
+```
+
+### Mapping a Specific County
+
+You can filter to map a specific county or region:
+
+```{r map_la}
+#| eval: true
+#| fig-align: "center"
+#| fig-width: 8
+#| fig-height: 5
+
+# Filter for Los Angeles County (FIPS code starts with 06037)
+df_la_plot <- yost_results$df_geometry |>
+  dplyr::left_join(yost_results$df_yost, by = "GEOID") %>%
+  filter(grepl("^06037", GEOID))
+
+# Create a choropleth map showing the continuous Yost Index
+ggplot(df_la_plot) +
+  # geom_sf creates the map; we fill by Yost value and use thin white borders
+  geom_sf(aes(fill = YostImputed), color = 'white', size = 0.05) +
+  # Use a continuous color scale (viridis plasma) for the Yost Index
+  scale_fill_viridis_c(
+    option = "plasma",
+    name = "Yost Index",
+    guide = guide_colorbar(
+      barwidth = 1,
+      barheight = 15,
+      title.position = "top",
+      title.hjust = 0.5
+    )
+  ) +
+  # Add informative labels
+  labs(
+    title = "Neighborhood Socioeconomic Status in California",
+    subtitle = "Yost Index | 2022 ACS 5-Year Estimates",
+    caption = "Higher values indicate higher socioeconomic status"
+  ) +
+  # theme_void removes axes and grid for a clean map appearance
+  theme_void() +
+  theme(
+    plot.title = element_text(face = "bold", size = 16, hjust = 0.5),
+    plot.subtitle = element_text(size = 12, hjust = 0.5, color = "grey30"),
+    plot.caption = element_text(size = 9, hjust = 0.5, color = "grey50", margin = margin(t = 10)),
+    legend.position = "right",
+    plot.margin = margin(0, 0, 0, 0)
+  )
+```
+
+## Shrinkage Stabilization
+
+### The Problem: Small-Area Estimation Noise
+
+When working at fine geographic levels — particularly census tracts and block groups — ACS estimates can be highly unreliable. A block group with a small population may have a median household income estimate with a margin of error (MOE) larger than the estimate itself. This sampling noise can distort the Yost Index, making some areas appear extreme simply due to measurement uncertainty rather than true socioeconomic differences.
+
+### The Solution: Borrowing Strength from Parent Geographies
+
+The shrinkage method addresses this by pulling noisy lower-level estimates toward the value of their parent geography. For example, a block group estimate is pulled toward its tract-level value, weighted by how uncertain the block group estimate is relative to how much the block groups within that tract actually vary from one another.
+
+The shrinkage weight is defined as:
+
+$$w = \frac{t^2}{s^2 + t^2}$$
+
+Where:
+
+- $t^2$ = within-parent heterogeneity (how much block groups vary within their tract)
+- $s^2 = (\text{MOE} / 1.645)^2$ = sampling variance from the ACS margin of error
+
+When a block group is **reliable** ($s^2$ is small relative to $t^2$), $w \approx 1$ and the estimate is used as-is. When it is **unreliable** ($s^2$ is large), $w \approx 0$ and the block group is pulled strongly toward its parent. Shrinkage is not applied when there is only one unit within a parent geography, or when either variance component is zero.
+
+The supported geographic hierarchies are:
+
+| Lower level | Parent level |
+|---|---|
+| Block group | Tract |
+| Tract | County |
+| County | State |
+
+### Using Shrinkage
+
+Enable shrinkage with `shrink = TRUE`. The output always includes both `df_yost_raw` (no shrinkage) and `df_yost` (shrunk) so you can compare them directly:
+
+```{r shrinkage_example}
+#| eval: true
+#| results: hide
+#| message: false
+#| warning: false
+
+yost_shrunk <- computeYostIndex(
+  geo    = "tract",
+  year   = 2022,
+  states = "CA",
+  scope  = "state",
+  shrink = TRUE,
+  impute = FALSE,
+  keep_geometry = FALSE,
+  return_format = "detailed"
+)
+```
+
+```{r shrinkage_output}
+#| eval: true
+
+# Baseline Yost (no shrinkage)
+head(yost_shrunk$df_yost_raw)
+
+# Shrunk Yost
+head(yost_shrunk$df_yost)
+```
+
+### Comparing Raw vs. Shrunk Estimates
+
+A useful diagnostic is to plot the raw against the shrunk values. Estimates that changed substantially are those where the ACS MOE was large relative to within-parent variability:
+
+```{r shrinkage_comparison}
+#| eval: true
+#| fig-align: "center"
+#| fig-width: 7
+#| fig-height: 5
+
+library(dplyr)
+library(ggplot2)
+
+# Join raw and shrunk on GEOID
+comparison <- yost_shrunk$df_yost_raw |>
+  dplyr::rename(Yost_raw = Yost, Quintile_raw = YostQuintile) |>
+  dplyr::left_join(
+    yost_shrunk$df_yost |>
+      dplyr::rename(Yost_shrunk = YostShrunk, Quintile_shrunk = YostShrunkQuintile),
+    by = c("GEOID", "annotation")
+  )
+
+ggplot(comparison, aes(x = Yost_raw, y = Yost_shrunk)) +
+  geom_point(alpha = 0.15, size = 0.6, color = "steelblue") +
+  geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed", linewidth = 0.8) +
+  labs(
+    title    = "Raw vs. Shrunk Yost Index",
+    subtitle = "Points off the diagonal were stabilized toward their parent geography",
+    x        = "Yost (Raw, no shrinkage)",
+    y        = "YostShrunk",
+    caption  = "Red dashed line = no change"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title    = element_text(face = "bold", size = 14, hjust = 0.5),
+    plot.subtitle = element_text(size = 11, hjust = 0.5, color = "grey30")
+  )
+```
+
+### When Should You Use Shrinkage?
+
+| Situation | Recommendation |
+|---|---|
+| County-level analysis | Generally not needed — estimates are stable |
+| Tract-level analysis | Consider using, especially for smaller states or rural areas |
+| Block group analysis | **Strongly recommended** — MOEs at this level can be very large |
+| Checking reliability | Always compare `df_yost_raw` vs `df_yost` to assess impact |
+
+## Further Reading
+
+For more information on the Yost Index and its applications:
+
+- Yost, K., Perkins, C., Cohen, R., Morris, C., & Wright, W. (2001). Socioeconomic status and breast cancer incidence in California for different race/ethnic groups. *Cancer Causes & Control*, 12(8), 703-711.
+- Yang, J., Schupp, C., Harrati, A., Clarke, C., Keegan, T. H., & Gomez, S. L. (2014). Developing an area-based socioeconomic measure from American Community Survey data. *Cancer Prevention Research*, 7(7).
+
+For package documentation and source code:
+
+- GitHub: https://github.com/HanLabCollaboration/ReproduceYost
+- Issues: https://github.com/HanLabCollaboration/ReproduceYost/issues
