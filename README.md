@@ -103,6 +103,48 @@ where $t^2$ is within-parent heterogeneity and $s^2 = (\text{MOE}/1.645)^2$ is t
 | Tract | Consider using, especially for smaller states |
 | Block group | **Strongly recommended** |
 
+## Spatial Imputation
+
+### The Problem: Missing ACS Data
+
+Some geographies — particularly small census tracts and block groups — have missing values for one or more ACS variables. This can happen when the Census Bureau suppresses estimates due to small sample sizes or when a geography has zero population. Missing values in any of the 7 component variables would otherwise prevent a Yost score from being computed.
+
+### The Solution: Neighbor-Based Imputation
+
+When `impute = TRUE`, missing values are filled using a spatial lag of neighboring geographies (Queen contiguity). For each missing variable, the imputed value is the (optionally population-weighted) mean of all neighboring units that have a valid estimate.
+
+```r
+# Weighted imputation using population size
+yost_imputed <- computeYostIndex(
+  geo        = "tract",
+  year       = 2022,
+  states     = "CA",
+  scope      = "state",
+  impute     = TRUE,
+  weight_var = "tot_pop"   # or "none" for unweighted
+)
+```
+
+Each row in `df_imputed` includes:
+
+- `nvar_imputed` — number of variables that were imputed
+- `nvar_still_missing` — number still missing after imputation (e.g., isolated geographies with no neighbors)
+
+The `annotation` column in `df_yost` records the imputation status of each geography:
+
+| Annotation | Meaning |
+|---|---|
+| `Complete data` | No imputation needed |
+| `Imputation completed` | All missing values were successfully imputed |
+| `Imputation incomplete` | Some variables still missing after imputation |
+| `No population` | Geography excluded (zero population) |
+
+| Geography | Recommendation |
+|---|---|
+| County | Rarely needed |
+| Tract | Recommended |
+| Block group | **Strongly recommended** |
+
 ## References
 
 - Yost, K., et al. (2001). Socioeconomic status and breast cancer incidence in California for different race/ethnic groups. *Cancer Causes & Control*, 12(8), 703–711.
