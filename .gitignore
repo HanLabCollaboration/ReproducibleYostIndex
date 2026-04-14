@@ -14,3 +14,6 @@ inst/doc
 
 # ignore the editing_details
 editing_details.R
+
+# batch pipeline: HPC scripts, pre-computed output, and logs
+batch/

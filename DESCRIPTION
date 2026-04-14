@@ -11,16 +11,16 @@ Description: Provides a simple, tidy interface for calculating the Yost Index,
     (county, tract, block group), shrinkage stabilization, and optional spatial imputation.
 License: MIT + file LICENSE.md
 Encoding: UTF-8
-LazyData: true
 URL: https://github.com/HanLabCollaboration/ReproduceYost
 BugReports: https://github.com/HanLabCollaboration/ReproduceYost/issues
 RoxygenNote: 7.3.2
-Imports: 
+Imports:
     dplyr,
     tidycensus,
     glue,
     purrr,
     magrittr,
+    readr,
     sf,
     spdep,
     data.table,
@@ -35,6 +35,6 @@ Suggests:
     ggplot2,
     gridExtra
 Depends:
-    R (>= 3.5.0)
+    R (>= 4.1.0)
 Config/testthat/edition: 3
 VignetteBuilder: knitr

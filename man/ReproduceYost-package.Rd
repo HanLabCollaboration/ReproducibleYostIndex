@@ -4,9 +4,9 @@
 \name{ReproduceYost-package}
 \alias{ReproduceYost}
 \alias{ReproduceYost-package}
-\title{ReproduceYost: A Tidy Interface for Calculating the Yost Index of Socioeconomic Status}
+\title{ReproduceYost: Reproducing the Yost Index of Neighborhood Socioeconomic Status}
 \description{
-Provides a simple, tidy interface for calculating the Yost Index, a composite measure of neighborhood-level socioeconomic status (SES), using data from the US Census Bureau's American Community Survey (ACS). Features include automatic data fetching, flexible geographies (county, tract, block group), and optional spatial imputation.
+Provides a simple, tidy interface for calculating the Yost Index, a composite measure of neighborhood-level socioeconomic status (SES), using data from the US Census Bureau's American Community Survey (ACS). Features include automatic data fetching, flexible geographies (county, tract, block group), shrinkage stabilization, and optional spatial imputation.
 }
 \seealso{
 Useful links:
