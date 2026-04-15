@@ -18,7 +18,7 @@ test_that("imputeMissing correctly imputes and handles edge cases", {
   )
 
   # Run the imputation
-  out_impute <- ReproduceYost:::imputeMissing(df_geo, quiet = TRUE)
+  out_impute <- ReproduceYostIndex:::imputeMissing(df_geo, quiet = TRUE)
 
   # --- Check the results ---
 
@@ -68,7 +68,7 @@ test_that("imputeMissing performs weighted imputation correctly", {
   )
 
   # Run weighted imputation
-  out_weighted <- ReproduceYost:::imputeMissing(df_geo, weight_var_sub = "tot_pop", quiet = TRUE)
+  out_weighted <- ReproduceYostIndex:::imputeMissing(df_geo, weight_var_sub = "tot_pop", quiet = TRUE)
 
   # B's income should be weighted mean of A and C
   # weighted.mean(c(100, 200), w = c(1000, 4000)) = (100*1000 + 200*4000) / 5000 = 180
@@ -89,7 +89,7 @@ test_that("imputeMissing handles empty geometries gracefully", {
   )
 
   # Should handle empty geometry without error
-  out_impute <- suppressMessages(ReproduceYost:::imputeMissing(df_geo, quiet = TRUE))
+  out_impute <- suppressMessages(ReproduceYostIndex:::imputeMissing(df_geo, quiet = TRUE))
 
   # Row B should not be imputed (no valid geometry)
   out_B <- out_impute[out_impute$GEOID == "B", ]
@@ -108,7 +108,7 @@ test_that("imputeMissing returns data without geometry", {
     geometry = st_sfc(poly_A, poly_B)
   )
 
-  out_impute <- ReproduceYost:::imputeMissing(df_geo, quiet = TRUE)
+  out_impute <- ReproduceYostIndex:::imputeMissing(df_geo, quiet = TRUE)
 
   # Output should NOT be an sf object
   expect_false(inherits(out_impute, "sf"))
@@ -130,7 +130,7 @@ test_that("imputeMissing excludes metadata columns from imputation", {
     geometry = st_sfc(poly_A, poly_B)
   )
 
-  out_impute <- ReproduceYost:::imputeMissing(df_geo, quiet = TRUE)
+  out_impute <- ReproduceYostIndex:::imputeMissing(df_geo, quiet = TRUE)
 
   # county_state should be preserved and not treated as an imputation variable
   expect_true("county_state" %in% colnames(out_impute))
@@ -146,7 +146,7 @@ test_that("imputeMissing errors on missing required columns", {
   )
 
   expect_error(
-    ReproduceYost:::imputeMissing(df_bad, quiet = TRUE),
+    ReproduceYostIndex:::imputeMissing(df_bad, quiet = TRUE),
     "must contain 'GEOID' and 'geometry'"
   )
 })
@@ -165,7 +165,7 @@ test_that("imputeMissing handles all-NA neighbors", {
     geometry = st_sfc(poly_A, poly_B, poly_C)
   )
 
-  out_impute <- ReproduceYost:::imputeMissing(df_geo, quiet = TRUE)
+  out_impute <- ReproduceYostIndex:::imputeMissing(df_geo, quiet = TRUE)
 
   # B's income should still be NA (all neighbors are NA)
   out_B <- out_impute[out_impute$GEOID == "B", ]
@@ -189,7 +189,7 @@ test_that("imputeMissing handles weight_var = 'none'", {
   )
 
   # Run with weight_var = "none"
-  out_unweighted <- ReproduceYost:::imputeMissing(df_geo, weight_var_sub = "none", quiet = TRUE)
+  out_unweighted <- ReproduceYostIndex:::imputeMissing(df_geo, weight_var_sub = "none", quiet = TRUE)
 
   # B's income should be simple mean: (100 + 200) / 2 = 150
   out_B <- out_unweighted[out_unweighted$GEOID == "B", ]

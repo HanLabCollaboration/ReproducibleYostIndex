@@ -18,8 +18,7 @@
 #'
 #' @param geo Geography level. One of \code{"county"}, \code{"tract"},
 #'   \code{"block group"} (or its alias \code{"cbg"}).
-#' @param year ACS 5-year estimate year (2011–2023). Block groups require
-#'   \code{year >= 2013}.
+#' @param year ACS 5-year estimate year (2013–2023).
 #' @param states Optional character vector of state abbreviations
 #'   (e.g. \code{c("CA", "NY")}) to subset the results. \code{NULL} (default)
 #'   returns all US states.
@@ -28,16 +27,16 @@
 #'   (\code{"national"}) or within each state separately (\code{"state"}).
 #' @param cache Logical. If \code{TRUE} (default), saves the downloaded file
 #'   to the user-level R cache directory
-#'   (\code{tools::R_user_dir("ReproduceYost", "cache")}) so the download is
+#'   (\code{tools::R_user_dir("ReproduceYostIndex", "cache")}) so the download is
 #'   skipped on subsequent calls.
 #' @param quiet Logical. If \code{TRUE}, suppresses all messages.
 #'   Defaults to \code{FALSE}.
 #'
 #' @return A tibble with columns \code{GEOID}, \code{year}, \code{geo},
-#' \code{scope}, \code{Yost}, \code{YostQuintile}, \code{YostShrunk},
-#' \code{YostShrunkQuintile}, \code{YostImputed}, \code{YostImputedQuintile},
-#' \code{YostShrunkImputed}, and \code{YostShrunkImputedQuintile}, sorted by
-#' \code{GEOID}.
+#' \code{scope}, \code{Yost}, \code{YostQuintile}, \code{YostStabilized},
+#' \code{YostStabilizedQuintile}, \code{YostImputed}, \code{YostImputedQuintile},
+#' \code{YostStabilizedImputed}, and \code{YostStabilizedImputedQuintile}, sorted
+#' by \code{GEOID}.
 #'
 #' @seealso \code{\link{computeYostIndex}} for the full pipeline when
 #'   pre-computed data are unavailable (e.g. very recent ACS years, custom
@@ -67,7 +66,7 @@
 #'   bg <- getYost(geo = "block group", year = 2021)
 #' }
 
-getYost <- function(
+getYostIndex <- function(
     geo    = "tract",
     year   = 2022,
     states = NULL,
@@ -86,13 +85,13 @@ getYost <- function(
   stopifnot(is.logical(cache), is.logical(quiet))
   stopifnot(is.numeric(year))
 
-  year_min <- if (geo == "block group") 2013L else 2011L
+  year_min <- 2013L
   year_max <- 2023L
 
   if (year < year_min) {
     stop(glue::glue(
-      "Pre-computed data for geo = '{geo}' starts at year {year_min} ",
-      "(got year = {year}). Use computeYostIndex() for earlier years."
+      "Pre-computed data starts at year {year_min} (got year = {year}). ",
+      "Use computeYostIndex() for 2011\u20132012."
     ))
   }
 
@@ -118,14 +117,14 @@ getYost <- function(
 
   # --- 2. Build URL and local cache path ---------------------------------------
 
-  data_tag   <- "data-v2023"
+  data_tag   <- "data-v2026.04"
   geo_tag    <- gsub(" ", "_", geo)
   filename   <- sprintf("yost_%s_%s_%d.csv.gz", geo_tag, scope, year)
   url        <- sprintf(
     "https://github.com/HanLabCollaboration/ReproduceYost-data/releases/download/%s/%s",
     data_tag, filename
   )
-  cache_dir  <- tools::R_user_dir("ReproduceYost", which = "cache")
+  cache_dir  <- tools::R_user_dir("ReproduceYostIndex", which = "cache")
   local_path <- file.path(cache_dir, data_tag, filename)
 
   # --- 3. Download (skip if cached) --------------------------------------------
@@ -148,6 +147,18 @@ getYost <- function(
   # --- 4. Read -----------------------------------------------------------------
 
   df <- readr::read_csv(local_path, show_col_types = FALSE, progress = FALSE)
+
+  # --- 4b. Translate legacy "Shrunk" column names to "Stabilized" --------------
+  col_map <- c(
+    YostShrunk                = "YostStabilized",
+    YostShrunkQuintile        = "YostStabilizedQuintile",
+    YostShrunkImputed         = "YostStabilizedImputed",
+    YostShrunkImputedQuintile = "YostStabilizedImputedQuintile"
+  )
+  to_rename <- intersect(names(col_map), names(df))
+  if (length(to_rename) > 0) {
+    names(df)[match(to_rename, names(df))] <- col_map[to_rename]
+  }
 
   # --- 5. Filter by states (first 2 chars of GEOID = state FIPS) ---------------
 

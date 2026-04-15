@@ -2,9 +2,9 @@
 
 export("%>%")
 export(computeYostIndex)
-export(getYost)
+export(getYostIndex)
 export(imputeMissing)
-export(shrinkYost)
+export(stabilizeYost)
 importFrom(dplyr,across)
 importFrom(dplyr,all_of)
 importFrom(dplyr,any_of)

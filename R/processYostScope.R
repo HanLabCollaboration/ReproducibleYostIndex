@@ -14,12 +14,12 @@
 #' 6. Annotating the final data based on data quality/imputation status.
 #'
 #' @param yost_data_sub An `sf` data frame subset for a single scope (e.g., one state).
-#' @param shrink_sub Logical, whether to apply the shrinkage stabilization method.
-#' @param geo The geography level string (e.g., `"tract"`, `"block group"`). Required when `shrink_sub = TRUE`.
-#' @param year The ACS5 survey year. Required when `shrink_sub = TRUE`.
-#' @param states A vector of state abbreviations. Required when `shrink_sub = TRUE`.
-#' @param acs_vars The list of ACS variable names from the attribute. Required when `shrink_sub = TRUE`.
-#' @param varlist A character vector of the 7 Yost variable names. Required when `shrink_sub = TRUE`.
+#' @param stabilize_sub Logical, whether to apply the shrinkage stabilization method.
+#' @param geo The geography level string (e.g., `"tract"`, `"block group"`). Required when `stabilize_sub = TRUE`.
+#' @param year The ACS5 survey year. Required when `stabilize_sub = TRUE`.
+#' @param states A vector of state abbreviations. Required when `stabilize_sub = TRUE`.
+#' @param acs_vars The list of ACS variable names from the attribute. Required when `stabilize_sub = TRUE`.
+#' @param varlist A character vector of the 7 Yost variable names. Required when `stabilize_sub = TRUE`.
 #' @param impute_sub Logical, whether to perform spatial imputation.
 #' @param rescale_sub The rescaling method ("rank" or "standardize").
 #' @param nfactors_sub The number of factors to extract in `psych::fa`.
@@ -45,7 +45,7 @@
 
 processYostScope <- function(
     yost_data_sub,
-    shrink_sub = FALSE,
+    stabilize_sub = FALSE,
     geo = NULL,
     year = NULL,
     states = NULL,
@@ -70,7 +70,7 @@ processYostScope <- function(
   if(nrow(yost_data_sub) == 0) return(NULL) # Skip if a state has no valid data
 
   # Step 2: Stabilize Yost variables (optional shrinkage)
-  if (shrink_sub) {
+  if (stabilize_sub) {
     geo_hierarchy <- list(
       "block group" = list(parent = "tract",   key_len = 11),
       "tract"       = list(parent = "county",  key_len = 5),
@@ -82,23 +82,23 @@ processYostScope <- function(
 
     yost_data_parent       <- fetchYostAcs(geo = geo_parent, year = year, states = states, get_geometry = FALSE)
     yost_data_parent_clean <- cleanAcsNames(dframe = yost_data_parent, geo = geo_parent)
-    yost_data_parent       <- calculateYostVars(data = yost_data_parent_clean, acs_vars = acs_vars, shrink_sub = FALSE)
+    yost_data_parent       <- calculateYostVars(data = yost_data_parent_clean, acs_vars = acs_vars, stabilize_sub = FALSE)
 
-    yost_data_shrunk_raw <- shrinkYost(yost_data = yost_data_sub, yost_data_parent = yost_data_parent,
+    yost_data_stabilized_raw <- stabilizeYost(yost_data = yost_data_sub, yost_data_parent = yost_data_parent,
                                        varlist = varlist, geo_parent_key_len = geo_parent_key_len)
 
-    # Rename: original -> _raw, _moe -> _raw_moe, _shrunk -> original name
-    colnames(yost_data_shrunk_raw)[colnames(yost_data_shrunk_raw) %in% varlist] <- paste0(varlist, "_raw")
-    colnames(yost_data_shrunk_raw)[colnames(yost_data_shrunk_raw) %in% paste0(varlist, "_moe")] <- paste0(varlist, "_raw_moe")
-    colnames(yost_data_shrunk_raw)[colnames(yost_data_shrunk_raw) %in% paste0(varlist, "_shrunk")] <- varlist
+    # Rename: original -> _raw, _moe -> _raw_moe, _stabilized -> original name
+    colnames(yost_data_stabilized_raw)[colnames(yost_data_stabilized_raw) %in% varlist] <- paste0(varlist, "_raw")
+    colnames(yost_data_stabilized_raw)[colnames(yost_data_stabilized_raw) %in% paste0(varlist, "_moe")] <- paste0(varlist, "_raw_moe")
+    colnames(yost_data_stabilized_raw)[colnames(yost_data_stabilized_raw) %in% paste0(varlist, "_stabilized")] <- varlist
 
     # Restore zero-population rows
     raw_yost_data_sub <- dplyr::bind_rows(
-      yost_data_shrunk_raw,
+      yost_data_stabilized_raw,
       raw_yost_data_sub |> dplyr::filter(tot_pop == 0)
     )
 
-    yost_input_data <- yost_data_shrunk_raw |>
+    yost_input_data <- yost_data_stabilized_raw |>
       dplyr::select(GEOID, tot_pop, income, wkcls, unemp, educ,
                     poverty150, rent, hval, dplyr::any_of("geometry"))
   } else {

@@ -1,5 +1,5 @@
 library(testthat)
-library(ReproduceYost) # This will load your package
+library(ReproduceYostIndex) # This will load your package
 library(vcr)
 
 # Set up vcr to store cassettes in the "tests/fixtures/vcr_cassettes" directory
@@ -371,7 +371,7 @@ test_that("computeYostIndex names df_yost columns based on shrink/impute", {
     # shrink=F, impute=F -> Yost
     result_none <- computeYostIndex(
       geo = "county", year = 2022, states = "CA",
-      shrink = FALSE, impute = FALSE, quiet = TRUE
+      stabilize = FALSE, impute = FALSE, quiet = TRUE
     )
     expect_true("Yost" %in% colnames(result_none$df_yost))
     expect_true("YostQuintile" %in% colnames(result_none$df_yost))
@@ -383,7 +383,7 @@ test_that("computeYostIndex names df_yost columns based on shrink/impute", {
     # shrink=F, impute=T -> YostImputed
     result_imputed <- computeYostIndex(
       geo = "tract", year = 2022, states = "RI",
-      shrink = FALSE, impute = TRUE, quiet = TRUE
+      stabilize = FALSE, impute = TRUE, quiet = TRUE
     )
     expect_true("YostImputed" %in% colnames(result_imputed$df_yost))
     expect_true("YostImputedQuintile" %in% colnames(result_imputed$df_yost))
@@ -398,7 +398,7 @@ test_that("df_yost_raw equals df_yost when shrink=FALSE and impute=FALSE", {
 
     result <- computeYostIndex(
       geo = "county", year = 2022, states = "CA",
-      shrink = FALSE, impute = FALSE, quiet = TRUE
+      stabilize = FALSE, impute = FALSE, quiet = TRUE
     )
 
   })

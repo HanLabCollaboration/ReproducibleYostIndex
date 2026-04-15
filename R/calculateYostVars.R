@@ -79,13 +79,13 @@ moe3 <- function(data, num, denom) {
 #'
 #' @param data The data frame from `clean_acs_names`.
 #' @param acs_vars The list of ACS variable names from the attribute.
-#' @param shrink_sub Logical. If `TRUE`, also compute MOE columns for each variable.
+#' @param stabilize_sub Logical. If `TRUE`, also compute MOE columns for each variable.
 #'
 #' @return A data frame with the new component variables.
 #'
 #' @importFrom dplyr mutate across all_of where select
 
-calculateYostVars <- function(data, acs_vars, shrink_sub = FALSE) {
+calculateYostVars <- function(data, acs_vars, stabilize_sub = FALSE) {
   data_calculated <- data |>
     dplyr::mutate(
       tot_pop = .data[[acs_vars$var_POPTOT]],
@@ -102,7 +102,7 @@ calculateYostVars <- function(data, acs_vars, shrink_sub = FALSE) {
     )
 
   # Conditionally add MOE variables
-  if (shrink_sub) {
+  if (stabilize_sub) {
     data_calculated <- data_calculated |>
       dplyr::mutate(
         tot_pop_moe  = moe1(data = data, var = acs_vars$var_POPTOT),

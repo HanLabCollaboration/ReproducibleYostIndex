@@ -4,14 +4,14 @@
 \alias{calculateYostVars}
 \title{Calculate Yost Index component variables}
 \usage{
-calculateYostVars(data, acs_vars, shrink_sub = FALSE)
+calculateYostVars(data, acs_vars, stabilize_sub = FALSE)
 }
 \arguments{
 \item{data}{The data frame from `clean_acs_names`.}
 
 \item{acs_vars}{The list of ACS variable names from the attribute.}
 
-\item{shrink_sub}{Logical. If `TRUE`, also compute MOE columns for each variable.}
+\item{stabilize_sub}{Logical. If `TRUE`, also compute MOE columns for each variable.}
 }
 \value{
 A data frame with the new component variables.

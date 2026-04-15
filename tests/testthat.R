@@ -7,6 +7,6 @@
 # * https://testthat.r-lib.org/articles/special-files.html
 
 library(testthat)
-library(ReproduceYost)
+library(ReproduceYostIndex)
 
-test_check("ReproduceYost")
+test_check("ReproduceYostIndex")

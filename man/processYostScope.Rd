@@ -6,7 +6,7 @@
 \usage{
 processYostScope(
   yost_data_sub,
-  shrink_sub = FALSE,
+  stabilize_sub = FALSE,
   geo = NULL,
   year = NULL,
   states = NULL,
@@ -23,17 +23,17 @@ processYostScope(
 \arguments{
 \item{yost_data_sub}{An `sf` data frame subset for a single scope (e.g., one state).}
 
-\item{shrink_sub}{Logical, whether to apply the shrinkage stabilization method.}
+\item{stabilize_sub}{Logical, whether to apply the shrinkage stabilization method.}
 
-\item{geo}{The geography level string (e.g., `"tract"`, `"block group"`). Required when `shrink_sub = TRUE`.}
+\item{geo}{The geography level string (e.g., `"tract"`, `"block group"`). Required when `stabilize_sub = TRUE`.}
 
-\item{year}{The ACS5 survey year. Required when `shrink_sub = TRUE`.}
+\item{year}{The ACS5 survey year. Required when `stabilize_sub = TRUE`.}
 
-\item{states}{A vector of state abbreviations. Required when `shrink_sub = TRUE`.}
+\item{states}{A vector of state abbreviations. Required when `stabilize_sub = TRUE`.}
 
-\item{acs_vars}{The list of ACS variable names from the attribute. Required when `shrink_sub = TRUE`.}
+\item{acs_vars}{The list of ACS variable names from the attribute. Required when `stabilize_sub = TRUE`.}
 
-\item{varlist}{A character vector of the 7 Yost variable names. Required when `shrink_sub = TRUE`.}
+\item{varlist}{A character vector of the 7 Yost variable names. Required when `stabilize_sub = TRUE`.}
 
 \item{impute_sub}{Logical, whether to perform spatial imputation.}
 

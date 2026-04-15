@@ -1,10 +1,10 @@
-# Testing Guide for ReproduceYost
+# Testing Guide for ReproduceYostIndex
 
-This document provides comprehensive guidance on testing the ReproduceYost package.
+This document provides comprehensive guidance on testing the ReproduceYostIndex package.
 
 ## Overview
 
-The ReproduceYost package uses the `testthat` framework for unit testing and `vcr` for mocking API calls to the Census Bureau. This ensures tests are:
+The ReproduceYostIndex package uses the `testthat` framework for unit testing and `vcr` for mocking API calls to the Census Bureau. This ensures tests are:
 - **Fast**: No repeated API calls after initial cassette creation
 - **Reliable**: Tests don't fail due to network issues
 - **Reproducible**: Same results every time
@@ -154,7 +154,7 @@ Based on the function's documentation:
 ```r
 # tests/testthat/test-myFunction.R
 library(testthat)
-library(ReproduceYost)
+library(ReproduceYostIndex)
 
 test_that("myFunction does X correctly", {
   # Arrange: Set up test data

@@ -1,18 +1,18 @@
-Package: ReproduceYost
+Package: ReproduceYostIndex
 Title: Reproducing the Yost Index of Neighborhood Socioeconomic Status
 Version: 0.0.0.9000
 Authors@R: c(
     person("Rafael", "Catoia Pulgrossi", email = "rcatoiap@stanford.edu", role = c("aut", "cre")),
     person("Tae Yoon", "Lee", email = "harrytyl@stanford.edu", role = c("aut")))
-Description: Provides a simple, tidy interface for calculating the Yost Index, 
+Description: Provides a simple, tidy interface for calculating the Yost Index,
     a composite measure of neighborhood-level socioeconomic status (SES),
     using data from the US Census Bureau's American Community Survey (ACS).
     Features include automatic data fetching, flexible geographies
-    (county, tract, block group), shrinkage stabilization, and optional spatial imputation.
+    (county, tract, block group), empirical Bayes stabilization, and optional spatial imputation.
 License: MIT + file LICENSE.md
 Encoding: UTF-8
-URL: https://github.com/HanLabCollaboration/ReproduceYost
-BugReports: https://github.com/HanLabCollaboration/ReproduceYost/issues
+URL: https://github.com/HanLabCollaboration/ReproduceYostIndex
+BugReports: https://github.com/HanLabCollaboration/ReproduceYostIndex/issues
 RoxygenNote: 7.3.2
 Imports:
     dplyr,

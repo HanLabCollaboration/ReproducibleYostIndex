@@ -15,7 +15,7 @@ test_that("cleanAcsNames works for all geographies", {
   )
 
   # Test 'block group' (and 'cbg' alias)
-  out_cbg <- ReproduceYost:::cleanAcsNames(df_cbg, geo = "block group")
+  out_cbg <- ReproduceYostIndex:::cleanAcsNames(df_cbg, geo = "block group")
   expect_named(out_cbg, c("NAME", "block_group", "tract", "county", "state"))
   expect_equal(out_cbg$block_group, "1")
   expect_equal(out_cbg$tract, "1.00")
@@ -23,19 +23,19 @@ test_that("cleanAcsNames works for all geographies", {
   expect_equal(out_cbg$state, "California")
 
   # Test 'tract'
-  out_tract <- ReproduceYost:::cleanAcsNames(df_tract, geo = "tract")
+  out_tract <- ReproduceYostIndex:::cleanAcsNames(df_tract, geo = "tract")
   expect_named(out_tract, c("NAME", "tract", "county", "state"))
   expect_equal(out_tract$tract, "2.00")
   expect_equal(out_tract$county, "Alameda")
 
   # Test 'county'
-  out_county <- ReproduceYost:::cleanAcsNames(df_county, geo = "county")
+  out_county <- ReproduceYostIndex:::cleanAcsNames(df_county, geo = "county")
   expect_named(out_county, c("NAME", "county", "state"))
   expect_equal(out_county$county, "Orange")
   expect_equal(out_county$state, "California")
 
   # Test 'state'
-  out_state <- ReproduceYost:::cleanAcsNames(df_state, geo = "state")
+  out_state <- ReproduceYostIndex:::cleanAcsNames(df_state, geo = "state")
   expect_named(out_state, c("NAME", "state"))
   expect_equal(out_state$state, "California")
 })
@@ -46,28 +46,28 @@ test_that("cleanAcsNames handles different county types", {
   df_parish <- data.frame(
     NAME = "Orleans Parish, Louisiana"
   )
-  out_parish <- ReproduceYost:::cleanAcsNames(df_parish, geo = "county")
+  out_parish <- ReproduceYostIndex:::cleanAcsNames(df_parish, geo = "county")
   expect_equal(out_parish$county, "Orleans")
 
   # Test Borough (Alaska)
   df_borough <- data.frame(
     NAME = "Anchorage Borough, Alaska"
   )
-  out_borough <- ReproduceYost:::cleanAcsNames(df_borough, geo = "county")
+  out_borough <- ReproduceYostIndex:::cleanAcsNames(df_borough, geo = "county")
   expect_equal(out_borough$county, "Anchorage")
 
   # Test Census Area (Alaska)
   df_census_area <- data.frame(
     NAME = "Bethel Census Area, Alaska"
   )
-  out_census_area <- ReproduceYost:::cleanAcsNames(df_census_area, geo = "county")
+  out_census_area <- ReproduceYostIndex:::cleanAcsNames(df_census_area, geo = "county")
   expect_equal(out_census_area$county, "Bethel")
 
   # Test Municipio (Puerto Rico)
   df_municipio <- data.frame(
     NAME = "San Juan Municipio, Puerto Rico"
   )
-  out_municipio <- ReproduceYost:::cleanAcsNames(df_municipio, geo = "county")
+  out_municipio <- ReproduceYostIndex:::cleanAcsNames(df_municipio, geo = "county")
   expect_equal(out_municipio$county, "San Juan")
 })
 
@@ -78,7 +78,7 @@ test_that("cleanAcsNames handles 'cbg' alias", {
   )
 
   # Test using 'cbg' alias
-  out_cbg <- ReproduceYost:::cleanAcsNames(df_cbg, geo = "cbg")
+  out_cbg <- ReproduceYostIndex:::cleanAcsNames(df_cbg, geo = "cbg")
   expect_named(out_cbg, c("NAME", "block_group", "tract", "county", "state"))
   expect_equal(out_cbg$block_group, "2")
   expect_equal(out_cbg$tract, "3.01")
@@ -90,7 +90,7 @@ test_that("cleanAcsNames removes extra whitespace", {
     NAME = "Census Tract  2.50,  Alameda County,  California"
   )
 
-  out <- ReproduceYost:::cleanAcsNames(df_extra_space, geo = "tract")
+  out <- ReproduceYostIndex:::cleanAcsNames(df_extra_space, geo = "tract")
 
   # All fields should have trimmed whitespace
   expect_equal(out$tract, "2.50")
@@ -103,7 +103,7 @@ test_that("cleanAcsNames errors on unknown geography", {
   df <- data.frame(NAME = "Test")
 
   expect_error(
-    ReproduceYost:::cleanAcsNames(df, geo = "zip_code"),
+    ReproduceYostIndex:::cleanAcsNames(df, geo = "zip_code"),
     "Unknown geo type"
   )
 })

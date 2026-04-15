@@ -1,5 +1,5 @@
 ---
-title: "Introduction to ReproduceYost"
+title: "Introduction to ReproduceYostIndex"
 author: " Rafael Catoia Pulgrossi | [QSU](https://med.stanford.edu/qsu 'View website') | [Tae Yoon Lee](https://profiles.stanford.edu/tae-yoon-lee 'View website') | [Summer Han](https://med.stanford.edu/summerhanlab.html 'View website')"
 date: today
 format:
@@ -62,17 +62,17 @@ The Yost Index is constructed from seven key socioeconomic indicators derived fr
 
 ### How the Yost Index is Calculated
 
-The `ReproduceYost` package automates the entire process of calculating the Yost Index:
+The `ReproduceYostIndex` package automates the entire process of calculating the Yost Index:
 
 1. **Data Retrieval**: Fetches the necessary ACS variables (estimates and margins of error) via the `tidycensus` package
 2. **Variable Calculation**: Computes the seven component variables from raw ACS estimates
-3. **Shrinkage Stabilization** *(optional)*: Reduces small-area estimation noise by pulling unreliable lower-level estimates (e.g., block groups) toward their parent geography (e.g., tract), weighted by sampling variance from the ACS margins of error
+3. **Stabilization Stabilization** *(optional)*: Reduces small-area estimation noise by pulling unreliable lower-level estimates (e.g., block groups) toward their parent geography (e.g., tract), weighted by sampling variance from the ACS margins of error
 4. **Missing Data Imputation** *(optional)*: Performs spatial imputation for missing values using neighboring geographies
 5. **Standardization**: Rescales variables (by ranking or standardizing) to put them on a comparable scale
 6. **Factor Analysis**: Extracts a single underlying factor representing neighborhood SES
 7. **Quintile Assignment**: Divides the continuous Yost scores into quintiles for easy interpretation
 
-The output always includes a **baseline Yost** (`df_yost_raw`, no shrinkage or imputation) alongside the **requested version** (`df_yost`), so you can directly compare the effect of any stabilization or imputation applied.
+The output always includes a **baseline Yost** (`df_yost_raw`, no stabilization or imputation) alongside the **requested version** (`df_yost`), so you can directly compare the effect of any stabilization or imputation applied.
 
 The resulting Yost Index is a continuous measure where higher values indicate higher socioeconomic status. Quintiles (1 = lowest SES, 5 = highest SES) provide a categorical version for stratified analyses.
 
@@ -85,7 +85,7 @@ The Yost Index offers several advantages over simpler SES measures:
 - **Comparability**: Standardized approach allows for comparisons across studies and geographic areas
 - **Flexibility**: Can be calculated at various geographic levels (county, tract, block group) and scopes (national, state, county)
 - **Handling Missing Data**: Built-in spatial imputation methods address incomplete data
-- **Small-Area Stabilization**: Optional shrinkage estimation reduces noise in unreliable small-area estimates by borrowing strength from parent geographies, particularly valuable for block group analyses where ACS margins of error can be very large
+- **Small-Area Stabilization**: Optional stabilization estimation reduces noise in unreliable small-area estimates by borrowing strength from parent geographies, particularly valuable for block group analyses where ACS margins of error can be very large
 
 ## Why the Yost Index Matters: A Confounding Example
 
@@ -103,8 +103,8 @@ Let's demonstrate this with a simulated example using real Yost Index data for C
 First, load the required packages:
 
 ```{r setup, message=FALSE, warning=FALSE}
-devtools::load_all() # Load the local version of ReproduceYost for vignette development 
-#library(ReproduceYost) # Load the ReproduceYost package (make sure to install it first)
+library(ReproduceYostIndex) 
+
 library(dplyr)
 library(ggplot2)
 
@@ -386,6 +386,6 @@ In real-world studies, the Yost Index can be used in regression models, propensi
 
 ## Conclusion
 
-Social determinants of health are fundamental drivers of health disparities. The Yost Index provides a robust, validated tool for measuring neighborhood socioeconomic status in health research. The `ReproduceYost` package makes it easy to calculate the Yost Index from ACS data, handle missing values through spatial imputation, and integrate this important measure into your analyses.
+Social determinants of health are fundamental drivers of health disparities. The Yost Index provides a robust, validated tool for measuring neighborhood socioeconomic status in health research. The `ReproduceYostIndex` package makes it easy to calculate the Yost Index from ACS data, handle missing values through spatial imputation, and integrate this important measure into your analyses.
 
-Whether you're studying environmental health, cancer epidemiology, health services research, or any field where neighborhood context matters, `ReproduceYost` provides a streamlined, reproducible workflow for incorporating socioeconomic context into your work.
+Whether you're studying environmental health, cancer epidemiology, health services research, or any field where neighborhood context matters, `ReproduceYostIndex` provides a streamlined, reproducible workflow for incorporating socioeconomic context into your work.

@@ -9,7 +9,7 @@ computeYostIndex(
   year = 2022,
   nfactors = 1,
   states = "CA",
-  shrink = FALSE,
+  stabilize = FALSE,
   impute = TRUE,
   rescale = "rank",
   quiet = FALSE,
@@ -24,8 +24,8 @@ computeYostIndex(
 \item{geo}{The geography level to compute the index for. Must be one of
 `"state"`,`"county"`, `"tract"`, or `"block group"` (or `"cbg"`).}
 
-\item{year}{The 5-year ACS survey year (e.g., 2022). Must be ≥ 2011, and
-must be ≥ 2013 for census block group}
+\item{year}{The 5-year ACS survey year (e.g., 2022). Must be >= 2011, and
+must be >= 2013 for census block group}
 
 \item{nfactors}{The number of factors to extract in the factor analysis.
 Defaults to 1.}
@@ -33,11 +33,12 @@ Defaults to 1.}
 \item{states}{A vector of state abbreviations (e.g., `c("CA", "NY")`) or
 `'all'` to run for the entire US.}
 
-\item{shrink}{Logical. If `TRUE`, applies a shrinkage estimator to stabilize
-the 7 component variables before factor analysis. Each lower-level estimate
-(e.g., tract) is pulled toward its parent geography (e.g., county) using a
-data-adaptive weight based on within-parent heterogeneity and sampling
-variance from the ACS margins of error. Defaults to `FALSE`.}
+\item{stabilize}{Logical. If `TRUE`, applies an empirical Bayes stabilization
+estimator to the 7 component variables before factor analysis. Each
+lower-level estimate (e.g., tract) is pulled toward its parent geography
+(e.g., county) using a data-adaptive weight based on within-parent
+heterogeneity and sampling variance from the ACS margins of error.
+Defaults to `FALSE`.}
 
 \item{impute}{Logical. If `TRUE`, performs a simple spatial mean imputation
 for missing data using 'queen' contiguity.}
@@ -71,11 +72,12 @@ Must be `"tot_pop"` (default) or `"none"`. Passed to `imputeMissing()` as
 \value{
 A list containing the following elements:
 \itemize{
-  \item `df_yost_raw`: Baseline Yost (no shrink, no impute) with `Yost` and
-    `YostQuintile`. Identical to `df_yost` when neither shrink nor impute is requested.
+  \item `df_yost_raw`: Baseline Yost (no stabilization, no imputation) with
+    `Yost` and `YostQuintile`. Identical to `df_yost` when neither
+    stabilization nor imputation is requested.
   \item `df_yost`: Requested Yost with dynamically named columns depending on
-    parameters: `Yost`, `YostShrunk`, `YostImputed`, or `YostShrunkImputed`,
-    plus the corresponding quintile column.
+    parameters: `Yost`, `YostStabilized`, `YostImputed`, or
+    `YostStabilizedImputed`, plus the corresponding quintile column.
   \item `df_raw_values`: Raw input data without geometry.
   \item `df_geometry`: Data frame containing only GEOID and geometry.
   \item `df_imputed`: Imputed data without geometry.
@@ -90,15 +92,15 @@ measure of neighborhood-level socioeconomic status (SES).
 
 The function automates: 1) data fetching from `tidycensus`, 2) calculation
 of the 7 component variables (income, working class, unemployment, education,
-poverty, rent, and home value), 3) optional shrinkage stabilization to reduce
-small-area estimation noise by borrowing strength from parent geographies,
-4) optional spatial mean imputation for missing values using queen contiguity,
-and 5) factor analysis to compute the final composite index.
+poverty, rent, and home value), 3) optional empirical Bayes stabilization to
+reduce small-area estimation noise by borrowing strength from parent
+geographies, 4) optional spatial mean imputation for missing values using
+queen contiguity, and 5) factor analysis to compute the final composite index.
 
-The output always includes a baseline Yost (`df_yost_raw`, no shrink, no
-impute) alongside the requested version (`df_yost`), so results can be
+The output always includes a baseline Yost (`df_yost_raw`, no stabilization,
+no imputation) alongside the requested version (`df_yost`), so results can be
 directly compared. The requested Yost column is named dynamically:
-`Yost`, `YostShrunk`, `YostImputed`, or `YostShrunkImputed`.
+`Yost`, `YostStabilized`, `YostImputed`, or `YostStabilizedImputed`.
 }
 \examples{
 \dontrun{
@@ -107,17 +109,17 @@ directly compared. The requested Yost column is named dynamically:
 
   # Compute Yost Index for tracts in California for 2022
   yost_ca_tracts <- computeYostIndex(
-    geo    = "tract",
-    year   = 2022,
-    states = "CA",
-    shrink = TRUE,
-    impute = TRUE,
-    scope  = "state"
+    geo       = "tract",
+    year      = 2022,
+    states    = "CA",
+    stabilize = TRUE,
+    impute    = TRUE,
+    scope     = "state"
   )
 
   # Compare raw vs requested side by side
   head(yost_ca_tracts$df_yost_raw)   # Yost, YostQuintile
-  head(yost_ca_tracts$df_yost)       # YostShrunkImputed, YostShrunkImputedQuintile
+  head(yost_ca_tracts$df_yost)       # YostStabilizedImputed, YostStabilizedImputedQuintile
 
   # Compute index for all counties in New England (state scope)
   yost_ne <- computeYostIndex(

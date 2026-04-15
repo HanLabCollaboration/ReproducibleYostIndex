@@ -2,12 +2,12 @@
 <!-- badges: start -->
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Codecov test coverage](https://codecov.io/gh/HanLabCollaboration/ReproduceYost/graph/badge.svg)](https://app.codecov.io/gh/HanLabCollaboration/ReproduceYost)
+[![Codecov test coverage](https://codecov.io/gh/HanLabCollaboration/ReproduceYostIndex/graph/badge.svg)](https://app.codecov.io/gh/HanLabCollaboration/ReproduceYostIndex)
 <!-- badges: end -->
 
-# ReproduceYost
+# ReproduceYostIndex
 
-`ReproduceYost` is an R package for computing the **Yost Index**, a composite measure of neighborhood-level socioeconomic status (SES), using data from the US Census Bureau's American Community Survey (ACS).
+`ReproduceYostIndex` is an R package for computing the **Yost Index**, a composite measure of neighborhood-level socioeconomic status (SES), using data from the US Census Bureau's American Community Survey (ACS).
 
 ## What is the Yost Index?
 
@@ -30,15 +30,15 @@ Higher Yost scores indicate higher neighborhood SES.
 - **Automatic data fetching**: wraps `tidycensus` to pull all required ACS variables
 - **Flexible geographies**: state, county, tract, or block group
 - **Flexible scopes**: rank geographies nationally, within state, or within county
-- **Shrinkage stabilization**: Empirical Bayes-style smoothing for unreliable small-area estimates (recommended for block groups and tracts)
+- **Stabilization**: Empirical Bayes-style smoothing for unreliable small-area estimates (recommended for block groups and tracts)
 - **Spatial imputation**: neighbor-based imputation for missing values
-- **Dual output**: always returns a baseline `df_yost_raw` (no shrinkage, no imputation) alongside the requested `df_yost`
+- **Dual output**: always returns a baseline `df_yost_raw` (no stabilization, no imputation) alongside the requested `df_yost`
 
 ## Installation
 
 ```r
 # install.packages("devtools")
-devtools::install_github("HanLabCollaboration/ReproduceYost")
+devtools::install_github("HanLabCollaboration/ReproduceYostIndex")
 ```
 
 You will also need a free **Census API key**:
@@ -52,26 +52,26 @@ tidycensus::census_api_key("YOUR_KEY_HERE", install = TRUE)
 ## Basic Usage
 
 ```r
-library(ReproduceYost)
+library(ReproduceYostIndex)
 
 yost_ca <- computeYostIndex(
   geo    = "tract",   # "state", "county", "tract", or "block group"
   year   = 2022,      # ACS 5-year survey year (>= 2011)
   states = "CA",      # state abbreviation(s), or "all"
   scope  = "state",   # "national", "state", or "county"
-  shrink = TRUE,      # shrinkage stabilization (recommended for tracts/block groups)
+  stabilize = TRUE,      # stabilization (recommended for tracts/block groups)
   impute = TRUE,      # spatial imputation for missing values
   keep_geometry = TRUE
 )
 
-# Always present: baseline Yost (no shrinkage, no imputation)
+# Always present: baseline Yost (no stabilization, no imputation)
 head(yost_ca$df_yost_raw)
 
 # Requested output — column name reflects parameters used:
 # shrink=F, impute=F -> Yost / YostQuintile
-# shrink=T           -> YostShrunk / YostShrunkQuintile
+# stabilize=TRUE           -> YostStabilized / YostStabilizedQuintile
 # impute=T           -> YostImputed / YostImputedQuintile
-# shrink=T, impute=T -> YostShrunkImputed / YostShrunkImputedQuintile
+# stabilize=TRUE, impute=T -> YostStabilizedImputed / YostStabilizedImputedQuintile
 head(yost_ca$df_yost)
 ```
 
@@ -79,7 +79,7 @@ head(yost_ca$df_yost)
 
 | Element | Description |
 |---|---|
-| `df_yost_raw` | Baseline Yost score — always no shrinkage, no imputation |
+| `df_yost_raw` | Baseline Yost score — always no stabilization, no imputation |
 | `df_yost` | Requested Yost score, dynamically named by parameters |
 | `df_raw_values` | Raw ACS estimates and margins of error |
 | `df_geometry` | Spatial geometries (if `keep_geometry = TRUE`) |
@@ -89,9 +89,9 @@ head(yost_ca$df_yost)
 
 For a minimal output (GEOID + score + quintile only), use `return_format = "minimal"`.
 
-## Shrinkage Stabilization
+## Stabilization
 
-At fine geographic levels, ACS margins of error (MOEs) can be large relative to the estimates themselves. The shrinkage method stabilizes noisy estimates by borrowing strength from the parent geography:
+At fine geographic levels, ACS margins of error (MOEs) can be large relative to the estimates themselves. The stabilization method stabilizes noisy estimates by borrowing strength from the parent geography:
 
 $$w = \frac{t^2}{s^2 + t^2}$$
 
