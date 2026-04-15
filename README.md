@@ -25,53 +25,128 @@ The Yost Index is derived via factor analysis on 7 ACS variables:
 
 Higher Yost scores indicate higher neighborhood SES.
 
-## Features
+---
 
-- **Automatic data fetching**: wraps `tidycensus` to pull all required ACS variables
-- **Flexible geographies**: state, county, tract, or block group
-- **Flexible scopes**: rank geographies nationally, within state, or within county
-- **Stabilization**: Empirical Bayes-style smoothing for unreliable small-area estimates (recommended for block groups and tracts)
-- **Spatial imputation**: neighbor-based imputation for missing values
-- **Dual output**: always returns a baseline `df_yost_raw` (no stabilization, no imputation) alongside the requested `df_yost`
+## Two Ways to Get Yost Index Data
 
-## Installation
+| | `getYostIndex()` | `computeYostIndex()` |
+|---|---|---|
+| **Census API key** | Not required | Required |
+| **Speed** | Instant (pre-computed) | Minutes to hours |
+| **Years available** | 2013–2023 | 2011–present |
+| **Geographies** | County, tract, block group | County, tract, block group, state |
+| **Scope** | National, state | National, state, county |
+| **Variants returned** | All four at once | One (your chosen parameters) |
+| **Best for** | Most analyses, quick exploration | Custom pipelines, newest ACS years |
+
+---
+
+## `getYostIndex()` — Recommended Starting Point
+
+Downloads pre-computed Yost Index values directly from GitHub. No Census API key needed, no wait time. All four Yost variants are returned in a single call.
+
+### What is pre-computed
+
+| Dimension | Coverage |
+|---|---|
+| **Geographies** | County, tract, census block group |
+| **Years** | 2013–2023 (county and tract from 2011) |
+| **Scopes** | National, state |
+| **Variants** | `Yost`, `YostStabilized`, `YostImputed`, `YostStabilizedImputed` (+ quintiles for each) |
+
+### Installation
 
 ```r
 # install.packages("devtools")
 devtools::install_github("HanLabCollaboration/ReproduceYostIndex")
 ```
 
-You will also need a free **Census API key**:
+### Usage
 
 ```r
-# 1. Get a key at: https://api.census.gov/data/key_signup.html
-# 2. Install it:
+library(ReproduceYostIndex)
+
+# All US counties, 2022 — no Census API key needed
+county_yost <- getYostIndex(geo = "county", year = 2022)
+head(county_yost)
+
+# Tracts for California and New York, state scope
+tracts <- getYostIndex(
+  geo    = "tract",
+  year   = 2022,
+  states = c("CA", "NY"),
+  scope  = "state"
+)
+
+# Block groups, national scope
+bg <- getYostIndex(geo = "block group", year = 2021)
+```
+
+### Output columns
+
+Each call returns a tibble with:
+
+| Column | Description |
+|---|---|
+| `GEOID` | Census geography identifier |
+| `Yost` / `YostQuintile` | Baseline — no stabilization, no imputation |
+| `YostStabilized` / `YostStabilizedQuintile` | Empirical Bayes stabilization applied |
+| `YostImputed` / `YostImputedQuintile` | Spatial imputation for missing values |
+| `YostStabilizedImputed` / `YostStabilizedImputedQuintile` | Both stabilization and imputation |
+
+### Caching
+
+Files are downloaded once and cached locally. Subsequent calls with the same arguments are instantaneous.
+
+```r
+# Force a fresh download
+getYostIndex(geo = "county", year = 2022, cache = FALSE)
+
+# See where the cache lives
+tools::R_user_dir("ReproduceYostIndex", "cache")
+```
+
+---
+
+## `computeYostIndex()` — Full Pipeline
+
+Use `computeYostIndex()` when you need:
+
+- A **year not yet pre-computed** (e.g., 2024 ACS once released)
+- **County-level scope** — quintiles computed within each county
+- **Intermediate outputs** — raw ACS values, factor loadings, imputed data, the 7 component variables
+- A **custom pipeline** — change rescaling method (`rank` vs `standardize`), imputation weights, or number of factors
+
+### Census API key (required)
+
+```r
+# Get a free key at: https://api.census.gov/data/key_signup.html
 tidycensus::census_api_key("YOUR_KEY_HERE", install = TRUE)
 ```
 
-## Basic Usage
+### Usage
 
 ```r
 library(ReproduceYostIndex)
 
 yost_ca <- computeYostIndex(
-  geo    = "tract",   # "state", "county", "tract", or "block group"
-  year   = 2022,      # ACS 5-year survey year (>= 2011)
-  states = "CA",      # state abbreviation(s), or "all"
-  scope  = "state",   # "national", "state", or "county"
-  stabilize = TRUE,      # stabilization (recommended for tracts/block groups)
-  impute = TRUE,      # spatial imputation for missing values
+  geo       = "tract",
+  year      = 2022,
+  states    = "CA",
+  scope     = "state",    # "national", "state", or "county"
+  stabilize = TRUE,       # empirical Bayes stabilization (recommended for tracts/block groups)
+  impute    = TRUE,       # spatial imputation for missing values
   keep_geometry = TRUE
 )
 
-# Always present: baseline Yost (no stabilization, no imputation)
-head(yost_ca$df_yost_raw)
+# Baseline Yost — always present regardless of parameters
+head(yost_ca$df_yost_raw)   # Yost, YostQuintile
 
-# Requested output — column name reflects parameters used:
-# shrink=F, impute=F -> Yost / YostQuintile
-# stabilize=TRUE           -> YostStabilized / YostStabilizedQuintile
-# impute=T           -> YostImputed / YostImputedQuintile
-# stabilize=TRUE, impute=T -> YostStabilizedImputed / YostStabilizedImputedQuintile
+# Requested variant — column name reflects parameters used:
+# stabilize=FALSE, impute=FALSE  →  Yost / YostQuintile
+# stabilize=TRUE                 →  YostStabilized / YostStabilizedQuintile
+# impute=TRUE                    →  YostImputed / YostImputedQuintile
+# stabilize=TRUE, impute=TRUE    →  YostStabilizedImputed / YostStabilizedImputedQuintile
 head(yost_ca$df_yost)
 ```
 
@@ -79,19 +154,19 @@ head(yost_ca$df_yost)
 
 | Element | Description |
 |---|---|
-| `df_yost_raw` | Baseline Yost score — always no stabilization, no imputation |
-| `df_yost` | Requested Yost score, dynamically named by parameters |
+| `df_yost_raw` | Baseline Yost — always no stabilization, no imputation |
+| `df_yost` | Requested Yost, column name reflects parameters used |
 | `df_raw_values` | Raw ACS estimates and margins of error |
 | `df_geometry` | Spatial geometries (if `keep_geometry = TRUE`) |
-| `df_imputed` | Variable values after imputation |
+| `df_imputed` | Component variables after imputation |
 | `df_rank` | Ranked/standardized variables used in factor analysis |
-| `obj_factor` | Factor analysis object(s) from `psych::fa` |
+| `obj_factor` | `psych::fa` object(s) |
 
-For a minimal output (GEOID + score + quintile only), use `return_format = "minimal"`.
+Use `return_format = "minimal"` for a compact output with only GEOID, score, and quintile.
 
-## Stabilization
+### Stabilization
 
-At fine geographic levels, ACS margins of error (MOEs) can be large relative to the estimates themselves. The stabilization method stabilizes noisy estimates by borrowing strength from the parent geography:
+At fine geographic levels, ACS margins of error can be large relative to the estimates themselves. The empirical Bayes stabilization method pulls noisy lower-level estimates toward their parent geography using a data-adaptive weight:
 
 $$w = \frac{t^2}{s^2 + t^2}$$
 
@@ -103,39 +178,14 @@ where $t^2$ is within-parent heterogeneity and $s^2 = (\text{MOE}/1.645)^2$ is t
 | Tract | Consider using, especially for smaller states |
 | Block group | **Strongly recommended** |
 
-## Spatial Imputation
+### Spatial Imputation
 
-### The Problem: Missing ACS Data
-
-Some geographies — particularly small census tracts and block groups — have missing values for one or more ACS variables. This can happen when the Census Bureau suppresses estimates due to small sample sizes or when a geography has zero population. Missing values in any of the 7 component variables would otherwise prevent a Yost score from being computed.
-
-### The Solution: Neighbor-Based Imputation
-
-When `impute = TRUE`, missing values are filled using a spatial lag of neighboring geographies (Queen contiguity). For each missing variable, the imputed value is the (optionally population-weighted) mean of all neighboring units that have a valid estimate.
-
-```r
-# Weighted imputation using population size
-yost_imputed <- computeYostIndex(
-  geo        = "tract",
-  year       = 2022,
-  states     = "CA",
-  scope      = "state",
-  impute     = TRUE,
-  weight_var = "tot_pop"   # or "none" for unweighted
-)
-```
-
-Each row in `df_imputed` includes:
-
-- `nvar_imputed` — number of variables that were imputed
-- `nvar_still_missing` — number still missing after imputation (e.g., isolated geographies with no neighbors)
-
-The `annotation` column in `df_yost` records the imputation status of each geography:
+When `impute = TRUE`, missing values are filled using the population-weighted spatial mean of neighboring geographies (Queen contiguity). Each row in `df_imputed` includes `nvar_imputed` and `nvar_still_missing`. The `annotation` column in `df_yost` records the imputation status:
 
 | Annotation | Meaning |
 |---|---|
 | `Complete data` | No imputation needed |
-| `Imputation completed` | All missing values were successfully imputed |
+| `Imputation completed` | All missing values successfully imputed |
 | `Imputation incomplete` | Some variables still missing after imputation |
 | `No population` | Geography excluded (zero population) |
 
@@ -144,6 +194,8 @@ The `annotation` column in `df_yost` records the imputation status of each geogr
 | County | Rarely needed |
 | Tract | Recommended |
 | Block group | **Strongly recommended** |
+
+---
 
 ## References
 
