@@ -7,7 +7,7 @@
 #' GitHub repository.
 #'
 #' Pre-computed files cover \strong{county}, \strong{tract}, and
-#' \strong{block group} geographies for ACS years 2011–2023 (block groups
+#' \strong{block group} geographies for ACS years 2011–2024 (block groups
 #' from 2013 onwards), under \strong{national} and \strong{state} scopes, for
 #' all four shrink/impute configurations. Note: \code{scope = "county"} is
 #' not available in the pre-computed files; use \code{\link{computeYostIndex}}
@@ -18,7 +18,7 @@
 #'
 #' @param geo Geography level. One of \code{"county"}, \code{"tract"},
 #'   \code{"block group"} (or its alias \code{"cbg"}).
-#' @param year ACS 5-year estimate year (2013–2023).
+#' @param year ACS 5-year estimate year (2013–2024).
 #' @param states Optional character vector of state abbreviations
 #'   (e.g. \code{c("CA", "NY")}) to subset the results. \code{NULL} (default)
 #'   returns all US states.
@@ -97,20 +97,20 @@ getYostIndex <- function(
   stopifnot(is.numeric(year))
 
   year_min <- if (geo == "block group") 2013L else 2011L
-  year_max <- 2023L
+  year_max <- 2024L
 
   if (year < year_min) {
     stop(glue::glue(
       "Pre-computed data for {geo} starts at year {year_min} (got year = {year}). ",
-      "Use computeYostIndex() for earlier years."
+      "Census data is only available for 2011+ for tracts and 2013+ for cbg"
     ))
   }
 
   if (year > year_max) {
     stop(glue::glue(
       "Pre-computed data is available through year {year_max}. ",
-      "Got year = {year}. Use computeYostIndex() to run the full pipeline, ",
-      "or check https://github.com/HanLabCollaboration/ReproduceYostIndex-data/releases ",
+      "Got year = {year}. Data is either not available for this year.",
+      "Please check https://github.com/HanLabCollaboration/ReproduceYostIndex-data/releases ",
       "for a newer release."
     ))
   }
