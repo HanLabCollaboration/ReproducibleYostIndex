@@ -16,13 +16,18 @@
 #' Files are cached locally after the first download so subsequent calls with
 #' the same arguments are instantaneous.
 #'
-#' Coverage is updated annually. Data for 2025 will be added once the US
-#' Census Bureau releases the 2025 ACS 5-year estimates (typically December
-#' of the following year). Use \code{\link{computeYostIndex}} in the interim.
+#' Coverage is updated annually. Data for a given year is added once the
+#' US Census Bureau releases the corresponding ACS 5-year estimates
+#' (typically in December of the following year); until then, the data
+#' cannot be produced by any tool in this package.
 #'
 #' @param geo Geography level. One of \code{"county"}, \code{"tract"},
 #'   \code{"block group"} (or its alias \code{"cbg"}).
-#' @param year ACS 5-year estimate year (2013–2024).
+#' @param year ACS 5-year estimate year. Available from 2011 for
+#'   \code{"state"}, \code{"county"}, and \code{"tract"}, and from 2013 for
+#'   \code{"block group"}, through 2024. Earlier years are not available
+#'   because the underlying ACS 5-year estimates do not cover them at these
+#'   geographies.
 #' @param states Optional character vector of state abbreviations
 #'   (e.g. \code{c("CA", "NY")}) to subset the results. \code{NULL} (default)
 #'   returns all US states.
@@ -48,9 +53,9 @@
 #' When \code{geometry = TRUE}, an \code{sf} object with the same columns plus
 #' a \code{geometry} column (WGS 84 / EPSG:4326).
 #'
-#' @seealso \code{\link{computeYostIndex}} for the full pipeline when
-#'   pre-computed data are unavailable (e.g. very recent ACS years, custom
-#'   geographies, or \code{scope = "county"}).
+#' @seealso \code{\link{computeYostIndex}} for the full pipeline when you
+#'   need a custom geography or \code{scope = "county"} (which is not
+#'   included in the pre-computed files).
 #'
 #' @importFrom dplyr filter pull arrange left_join select
 #' @importFrom readr read_csv
@@ -105,15 +110,18 @@ getYostIndex <- function(
 
   if (year < year_min) {
     stop(glue::glue(
-      "Pre-computed data for {geo} starts at year {year_min} (got year = {year}). ",
-      "Census data is only available for 2011+ for tracts and 2013+ for cbg"
+      "Yost Index data for '{geo}' is not available for year {year}. ",
+      "The ACS 5-year estimates underlying the Yost Index only cover ",
+      "2011 onwards for tracts (and state/county) and 2013 onwards for ",
+      "block groups, so earlier years cannot be produced by either ",
+      "getYostIndex() or computeYostIndex()."
     ))
   }
 
   if (year > year_max) {
     stop(glue::glue(
-      "Pre-computed data is available through year {year_max}. ",
-      "Got year = {year}. Data is either not available for this year.",
+      "Pre-computed data is available through year {year_max} (got year = {year}). ",
+      "This year may not yet be released. ",
       "Please check https://github.com/HanLabCollaboration/ReproduceYostIndex-data/releases ",
       "for a newer release."
     ))

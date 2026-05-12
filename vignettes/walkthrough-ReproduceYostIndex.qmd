@@ -42,7 +42,7 @@ library(sf)
 | **Variants returned** | Four YostIndex possible versions (Raw/Stabilized/Imputed/Stabilized+Imputed) | One (your chosen parameters) |
 | **Best for** | Most analyses, quick exploration | Custom pipelines |
 
-**Start with `getYostIndex()`**. It downloads pre-computed files from GitHub — no Census API key, no wait, all four Yost variants in a single call. Switch to `computeYostIndex()` only when you need a year not yet pre-computed, a county-level scope, or a fully custom pipeline.
+**Start with `getYostIndex()`**. It downloads pre-computed files from GitHub — no Census API key, no wait, all four Yost variants in a single call. Switch to `computeYostIndex()` only when you need a county-level scope, intermediate outputs, or a fully custom pipeline.
 
 ---
 
@@ -301,7 +301,6 @@ yost_la <- computeYostIndex(
 knitr::kable(data.frame(
   Question = c(
     "Do I have a Census API key?",
-    "Do I need data for 2025 or later?",
     "Do I need county-level scope?",
     "Do I need intermediate outputs (raw ACS, factor loadings)?",
     "Am I doing a quick analysis or teaching?"
@@ -310,11 +309,9 @@ knitr::kable(data.frame(
     "Either function works",
     "Use computeYostIndex()",
     "Use computeYostIndex()",
-    "Use computeYostIndex()",
     "Use getYostIndex()"
   ),
   `If NO` = c(
-    "Use getYostIndex()",
     "Use getYostIndex()",
     "Use getYostIndex()",
     "Use getYostIndex()",

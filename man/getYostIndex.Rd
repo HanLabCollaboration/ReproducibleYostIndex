@@ -18,7 +18,11 @@ getYostIndex(
 \item{geo}{Geography level. One of \code{"county"}, \code{"tract"},
 \code{"block group"} (or its alias \code{"cbg"}).}
 
-\item{year}{ACS 5-year estimate year (2013–2024).}
+\item{year}{ACS 5-year estimate year. Available from 2011 for
+\code{"state"}, \code{"county"}, and \code{"tract"}, and from 2013 for
+\code{"block group"}, through 2024. Earlier years are not available
+because the underlying ACS 5-year estimates do not cover them at these
+geographies.}
 
 \item{states}{Optional character vector of state abbreviations
 (e.g. \code{c("CA", "NY")}) to subset the results. \code{NULL} (default)
@@ -66,9 +70,10 @@ instead.
 Files are cached locally after the first download so subsequent calls with
 the same arguments are instantaneous.
 
-Coverage is updated annually. Data for 2025 will be added once the US
-Census Bureau releases the 2025 ACS 5-year estimates (typically December
-of the following year). Use \code{\link{computeYostIndex}} in the interim.
+Coverage is updated annually. Data for a given year is added once the
+US Census Bureau releases the corresponding ACS 5-year estimates
+(typically in December of the following year); until then, the data
+cannot be produced by any tool in this package.
 }
 \examples{
 \dontrun{
@@ -91,7 +96,7 @@ of the following year). Use \code{\link{computeYostIndex}} in the interim.
 }
 }
 \seealso{
-\code{\link{computeYostIndex}} for the full pipeline when
-  pre-computed data are unavailable (e.g. very recent ACS years, custom
-  geographies, or \code{scope = "county"}).
+\code{\link{computeYostIndex}} for the full pipeline when you
+  need a custom geography or \code{scope = "county"} (which is not
+  included in the pre-computed files).
 }
