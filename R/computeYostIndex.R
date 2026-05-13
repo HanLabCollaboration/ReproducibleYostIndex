@@ -165,18 +165,18 @@ if (year <= 2012 && !geo %in% c("state", "county", "tract")) {
 get_geometry <- impute || keep_geometry
 if (states[1] == "all") {
   all_geos <- unique(tidycensus::fips_codes$state)
-  non_states <- c("DC", "PR", "AS", "GU", "MP", "VI", "UM")
+  non_states <- c("PR", "AS", "GU", "MP", "VI", "UM")
   states <- setdiff(all_geos, non_states)
 }
 else {
   all_geos <- unique(tidycensus::fips_codes$state)
-  non_states <- c("DC", "PR", "AS", "GU", "MP", "VI", "UM")
+  non_states <- c("PR", "AS", "GU", "MP", "VI", "UM")
   valid_states <- setdiff(all_geos, non_states)
   invalid_states <- setdiff(states, valid_states)
   if (length(invalid_states) > 0) {
     invalid_states_str <- glue::glue_collapse(invalid_states, 
                                               sep = ", ")
-    stop(glue::glue("Invalid state abbreviations provided: {invalid_states_str}.\n Please use standard 2-letter postal codes for the 50 US states."))
+    stop(glue::glue("Invalid state abbreviations provided: {invalid_states_str}.\n Please use standard 2-letter postal codes for the 50 US states or DC."))
   }
 }
 if (!quiet) 
