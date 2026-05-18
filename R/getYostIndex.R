@@ -140,23 +140,40 @@ getYostIndex <- function(
 
   # --- 2. Build URLs and local cache paths -------------------------------------
 
-  data_tag  <- "data-v2026.04"
+  # Resolve the current "Latest" release tag from GitHub by following the
+  # /releases/latest redirect. Used only to namespace the local cache so a
+  # new release invalidates stale files. Falls back to "latest" if offline.
+  resolve_latest_tag <- function() {
+    url <- "https://github.com/HanLabCollaboration/ReproduceYostIndex-data/releases/latest"
+    hdrs <- tryCatch(
+      utils::curlGetHeaders(url, redirect = FALSE),
+      error = function(e) NULL
+    )
+    if (is.null(hdrs)) return("latest")
+    loc <- grep("^location:", hdrs, ignore.case = TRUE, value = TRUE)
+    if (!length(loc)) return("latest")
+    tag <- sub(".*/tag/([^[:space:]\r\n]+).*", "\\1", loc[1])
+    if (!nzchar(tag)) "latest" else tag
+  }
+
+  data_tag  <- resolve_latest_tag()
   geo_tag   <- gsub(" ", "_", geo)
   cache_dir <- tools::R_user_dir("ReproduceYostIndex", which = "cache")
 
-  # CSV
+  # CSV — always pulled from /releases/latest/download/ so users get the
+  # current release without bumping the package.
   csv_file   <- sprintf("yost_%s_%s_%d.csv.gz", geo_tag, scope, year)
   csv_url    <- sprintf(
-    "https://github.com/HanLabCollaboration/ReproduceYostIndex-data/releases/download/%s/%s",
-    data_tag, csv_file
+    "https://github.com/HanLabCollaboration/ReproduceYostIndex-data/releases/latest/download/%s",
+    csv_file
   )
   csv_path   <- file.path(cache_dir, data_tag, csv_file)
 
   # GeoPackage (scope-independent: geometry is the same for national and state)
   gpkg_file  <- sprintf("yost_%s_%d.gpkg", geo_tag, year)
   gpkg_url   <- sprintf(
-    "https://github.com/HanLabCollaboration/ReproduceYostIndex-data/releases/download/%s/%s",
-    data_tag, gpkg_file
+    "https://github.com/HanLabCollaboration/ReproduceYostIndex-data/releases/latest/download/%s",
+    gpkg_file
   )
   gpkg_path  <- file.path(cache_dir, data_tag, gpkg_file)
 
