@@ -1,0 +1,635 @@
+---
+title: "Introduction to ReproducibleYostIndex"
+author: " Rafael Catoia Pulgrossi | [QSU](https://med.stanford.edu/qsu 'View website') | [Tae Yoon Lee](https://profiles.stanford.edu/tae-yoon-lee 'View website') | [Summer Han](https://med.stanford.edu/summerhanlab.html 'View website')"
+date: today
+format:
+  html:
+    self-contained: true
+    theme: united
+    toc: true
+    toc-expand: 4
+    toc-depth: 4
+    code-fold: true
+    toc-title: 'Contents'
+    page-layout: full
+    grid:
+      body-width: 1440px
+      gutter-width: 1.5rem
+execute:
+  freeze: true
+editor_options:
+  chunk_output_type: console
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5,
+  fig.align = "center"
+)
+```
+
+## Social Determinants of Health
+
+Social determinants of health (SDOH) are the conditions in which people are born, grow, live, work, and age. These circumstances are shaped by the distribution of money, power, and resources at global, national, and local levels. Research has consistently shown that SDOH have a profound impact on health outcomes, often accounting for more variation in health than medical care alone.
+
+Key domains of SDOH include:
+
+- **Economic Stability**: Employment, income, expenses, debt, and financial support
+- **Education Access and Quality**: Educational attainment, literacy, language, and early childhood education
+- **Healthcare Access and Quality**: Insurance coverage, access to primary care, and health literacy
+- **Neighborhood and Built Environment**: Housing quality, transportation, safety, parks, and walkability
+- **Social and Community Context**: Social cohesion, civic participation, discrimination, and incarceration
+
+Understanding and measuring SDOH is critical for health research and intervention. Neighborhood-level socioeconomic status (SES) is one of the most important social determinants, as it captures the collective effect of multiple socioeconomic factors that influence health behaviors, access to resources, and exposure to environmental hazards.
+
+## The Yost Index: A Composite Measure of Neighborhood SES
+
+The Yost Index is a validated, composite measure of neighborhood-level socioeconomic status developed by cancer researchers to study the relationship between SES and cancer outcomes (Yost et al., 2001). Unlike single indicators such as median income or poverty rates, the Yost Index combines multiple socioeconomic variables to provide a more comprehensive and nuanced measure of neighborhood disadvantage.
+
+### The Seven Component Variables
+
+The Yost Index is constructed from seven key socioeconomic indicators derived from the U.S. Census Bureau's American Community Survey (ACS):
+
+1. **Median household income** (`income`)
+2. **Percent working class** (`wkcls`): Proportion of employed persons in working-class occupations
+3. **Unemployment rate** (`unemp`): Percent of civilians in the labor force who are unemployed
+4. **Educational attainment** (`educ`): Percent with less than high school education (age 25+)
+5. **Poverty rate** (`poverty150`): Percent of persons below 150% of the federal poverty line
+6. **Median rent** (`rent`): Median gross rent for renter-occupied housing units
+7. **Median home value** (`hval`): Median value of owner-occupied housing units
+
+### How the Yost Index is Calculated
+
+The `ReproducibleYostIndex` package automates the entire process of calculating the Yost Index:
+
+1. **Data Retrieval**: Fetches the necessary ACS variables (estimates and margins of error) via the `tidycensus` package
+2. **Variable Calculation**: Computes the seven component variables from raw ACS estimates
+3. **Stabilization** *(optional)*: Reduces small-area estimation noise by pulling unreliable lower-level estimates (e.g., block groups) toward their parent geography (e.g., tract), weighted by sampling variance from the ACS margins of error
+4. **Missing Data Imputation** *(optional)*: Performs spatial imputation for missing values using neighboring geographies
+5. **Standardization**: Rescales variables (by ranking or standardizing) to put them on a comparable scale
+6. **Factor Analysis**: Extracts a single underlying factor representing neighborhood SES
+7. **Quintile Assignment**: Divides the continuous Yost scores into quintiles for easy interpretation
+
+The resulting Yost Index is a continuous measure where higher values indicate higher socioeconomic status. Quintiles (1 = lowest SES, 5 = highest SES) provide a categorical version for stratified analyses.
+
+### Why Use the Yost Index?
+
+The Yost Index offers several advantages over simpler SES measures:
+
+- **Comprehensiveness**: Captures multiple dimensions of socioeconomic disadvantage
+- **Validation**: Extensively used in epidemiological research, particularly cancer studies
+- **Comparability**: Standardized approach allows for comparisons across studies and geographic areas
+- **Flexibility**: Can be calculated at various geographic levels (county, tract, block group) and scopes (national, state)
+- **Handling Missing Data**: Built-in spatial imputation methods address incomplete data
+- **Small-Area Stabilization**: Optional stabilization estimation reduces noise in unreliable small-area estimates by borrowing strength from parent geographies, particularly valuable for block group analyses where ACS margins of error can be very large
+
+## Getting Yost Index Data with `getYostIndex()`
+
+The recommended way to obtain Yost Index values is `getYostIndex()` — a fast, Census-API-free function that downloads pre-computed results directly from the [ReproducibleYostIndex-data](https://github.com/HanLabCollaboration/ReproducibleYostIndex-data) GitHub repository.
+
+### Pre-computation and Data Release
+
+To make the Yost Index immediately accessible without requiring a Census API key or computation time, we pre-computed all four Yost variants for every geography × scope × year combination using a SLURM batch pipeline on a high-performance computing cluster. The results are published as release assets on GitHub under the tag **`data-v2026.04`**.
+
+#### Computation Details
+
+Each pre-computed file was produced using the following pipeline:
+
+- **Ranking**: Each of the seven Yost component variables is ranked across all GEOIDs within the scope pool (national or state) before factor analysis. Ranking places all variables on a common, interpretable scale and harmonizes scores across GEOIDs regardless of ACS year or geographic vintage.
+- **Factor analysis**: Performed using the `psych` R package (Maximum Likelihood extraction, oblimin rotation), retaining a single latent factor to represent the Yost Index.
+- **Scope** controls which pool of geographies is used for ranking and quintile assignment:
+  - `scope = "national"` — all geographies across the entire United States are ranked together. A quintile of 5 means a neighborhood is among the most deprived 20% **nationally**. This is the appropriate choice for studies comparing areas across states.
+  - `scope = "state"` — geographies are ranked **within each state separately**. A quintile of 5 means the neighborhood is among the most deprived 20% **within its state**. This removes between-state variation and is preferred when the research question is about relative deprivation within a state.
+- **Four variants** are always pre-computed and returned together: baseline (`Yost`), empirical Bayes–stabilized (`YostStabilized`), missing-value imputed (`YostImputed`), and stabilized + imputed (`YostStabilizedImputed`).
+
+#### Available Files
+
+| Geography | Scope | Years |
+|---|---|---|
+| County | National, State | 2011–2024 |
+| Tract | National, State | 2011–2024 |
+| Block group | National, State | 2013–2024 |
+
+> **Coverage note:** Pre-computed files currently cover ACS 5-year estimates through **2024**. Data for 2025 will be added once the US Census Bureau releases the 2025 ACS 5-year estimates (typically December of the following year).
+
+Two file types are available per combination:
+
+- **74 CSV files** (`.csv.gz`): one per geography × scope × year, containing all four Yost variants in a single wide table
+- **37 GeoPackage files** (`.gpkg`): one per geography × year (scope-agnostic), containing Census boundaries for mapping
+
+Files are cached locally after the first download so subsequent calls with the same arguments are instantaneous.
+
+### `getYostIndex()` Options
+
+```r
+getYostIndex(
+  geo      = "tract",        # "county", "tract", "block group" (or "cbg"), "state"
+  year     = 2022,           # ACS 5-year estimate year (2011–2024; block group: 2013–2024)
+  states   = NULL,           # character vector of state abbreviations, e.g. c("CA", "NY")
+  scope    = "national",     # "national" or "state"
+  geometry = FALSE,          # TRUE returns an sf object with Census boundaries attached
+  cache    = TRUE,           # FALSE forces a fresh download (bypasses local cache)
+  quiet    = FALSE           # TRUE suppresses all download messages
+)
+```
+
+The function returns a tibble (or `sf` object when `geometry = TRUE`) with columns:
+
+| Column | Description |
+|---|---|
+| `GEOID` | Census geographic identifier |
+| `year`, `geo`, `scope` | Parameters used |
+| `Yost`, `YostQuintile` | Baseline Yost Index |
+| `YostStabilized`, `YostStabilizedQuintile` | Empirical Bayes–stabilized |
+| `YostImputed`, `YostImputedQuintile` | Missing-value imputed |
+| `YostStabilizedImputed`, `YostStabilizedImputedQuintile` | Stabilized + imputed |
+
+All four variants are always returned in a single call — no need to recompute for different configurations.
+
+### Quick Examples
+
+The three calls below illustrate the most common use patterns. All return a tibble with all four Yost variants — no Census API key required. Files are cached locally after the first download, so repeat calls are instantaneous.
+
+- **Counties** (`geo = "county"`) are the coarsest geography and fastest to download. National scope is the default, ranking all US counties together.
+- **Tracts** (`geo = "tract"`) offer finer resolution. Passing `states` restricts the download to the requested states; `scope = "state"` re-ranks geographies within each state separately, removing between-state variation.
+- **Block groups** (`geo = "block group"`) provide the highest spatial resolution available. Setting `geometry = TRUE` attaches Census boundary polygons, returning an `sf` object ready for mapping.
+
+```{r getYostIndex_examples, message=FALSE, warning=FALSE, eval=FALSE}
+library(ReproducibleYostIndex)
+
+# All US counties, 2022 — no Census API key needed
+county_yost <- getYostIndex(geo = "county", year = 2022)
+
+# Tracts for California and New York, state-level quintiles
+tracts <- getYostIndex(
+  geo    = "tract",
+  year   = 2022,
+  states = c("CA", "NY"),
+  scope  = "state"
+)
+
+# Block groups with geometry attached for direct mapping
+bg_sf <- getYostIndex(
+  geo      = "block group",
+  year     = 2021,
+  states   = "CA",
+  geometry = TRUE
+)
+```
+
+The maps below show the Yost Stabilized + Imputed quintile (`YostStabilizedImputedQuintile`) across three geographies simultaneously — from the national county-level picture down to Manhattan block groups — using the 2022 ACS and national scope throughout.
+
+```{r getYostIndex_maps, message=FALSE, warning=FALSE, fig.width=16, fig.height=6, fig.align="center"}
+library(ReproducibleYostIndex)
+library(ggplot2)
+library(dplyr)
+library(sf)
+library(patchwork)
+
+# --- Data -------------------------------------------------------------------
+us_counties <- getYostIndex(geo = "county",      year = 2022,
+                            geometry = TRUE, quiet = TRUE)
+
+ca_tracts   <- getYostIndex(geo = "tract",       year = 2022,
+                            states = "CA", geometry = TRUE, quiet = TRUE)
+
+mn_bg       <- getYostIndex(geo = "block group", year = 2022,
+                            states = "NY", geometry = TRUE, quiet = TRUE) |>
+  dplyr::filter(startsWith(GEOID, "36061"))   # New York County (Manhattan)
+
+# --- Shared palette ---------------------------------------------------------
+quintile_colors <- c(
+  "1" = "#e0f3db",
+  "2" = "#a8ddb5",
+  "3" = "#7bccc4",
+  "4" = "#43a2ca",
+  "5" = "#0868ac"
+)
+
+make_map <- function(data, title, subtitle = NULL, linewidth = 0.1) {
+  data <- data |>
+    dplyr::mutate(q = factor(YostStabilizedImputedQuintile, levels = 1:5))
+
+  ggplot(data) +
+    geom_sf(aes(fill = q), color = "grey80", linewidth = linewidth) +
+    scale_fill_manual(
+      values       = quintile_colors,
+      name         = "Quintile",
+      labels       = c("1", "2", "3", "4", "5"),
+      drop         = FALSE,
+      na.value     = "white",
+      na.translate = FALSE,
+      guide        = guide_legend(override.aes = list(linewidth = 0.2, color = "white"))
+    ) +
+    labs(title = title, subtitle = subtitle) +
+    theme_void(base_size = 11) +
+    theme(
+      plot.title    = element_text(face = "bold", size = 13, hjust = 0.5),
+      plot.subtitle = element_text(size = 9, hjust = 0.5, color = "grey40"),
+      legend.position = "bottom",
+      legend.title  = element_text(size = 9),
+      legend.text   = element_text(size = 8)
+    )
+}
+
+# --- Plot 1: US Counties (CONUS, Albers projection) -------------------------
+p1 <- us_counties |>
+  dplyr::filter(!startsWith(GEOID, "02"),    # drop Alaska
+                !startsWith(GEOID, "15"),    # drop Hawaii
+                !startsWith(GEOID, "72")) |> # drop Puerto Rico
+  make_map(
+    title     = "US Counties",
+    subtitle  = "Yost Stabilized + Imputed | 2022 ACS | National Scope",
+    linewidth = 0.05
+  ) +
+  coord_sf(crs = "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=37.5 +lon_0=-96")
+
+# --- Plot 2: California Tracts ----------------------------------------------
+p2 <- make_map(
+  ca_tracts,
+  title     = "California Census Tracts",
+  subtitle  = "Yost Stabilized + Imputed | 2022 ACS | National Scope",
+  linewidth = 0.05
+)
+
+# --- Plot 3: Manhattan Block Groups -----------------------------------------
+p3 <- make_map(
+  mn_bg,
+  title     = "Manhattan Block Groups",
+  subtitle  = "Yost Stabilized + Imputed | 2022 ACS | National Scope",
+  linewidth = 0.15
+)
+
+# --- Combine with single shared legend --------------------------------------
+combined <- (p1 + p2 + p3) +
+  plot_layout(ncol = 3, widths = c(1, 1, 1), guides = "collect") &
+  theme(legend.position = "bottom")
+
+combined + plot_annotation(
+  title = "Neighborhood Socioeconomic Status — Yost Index",
+  theme = theme(plot.title = element_text(face = "bold", size = 14, hjust = 0.5))
+)
+```
+
+#### Baseline vs. Stabilized + Imputed: San Mateo County Tracts
+
+The four Yost variants returned by `getYostIndex()` differ in whether stabilization and spatial imputation are applied. The comparison below focuses on the impact of the imputation step on the availability of Yost Index values at the block group level, where ACS data are often sparse. 
+
+- **Yost Index**: raw factor scores, ranked across all census block groups. Block groups with sparse ACS data or missing values will have missing quintiles (shown in white).
+
+- **Yost Index Stabilized + Imputed**: estimates are first pulled toward their parent tract/county mean using ACS margins of error (stabilization), and any remaining missing values are filled from neighboring geographies (imputation). This version is recommended for analyses where data completeness and small-area reliability matter.
+
+```{r imputed_comparison, message=FALSE, warning=FALSE, fig.width=16, fig.height=8, fig.align="center"}
+library(patchwork)
+
+# San Mateo County tracts, national scope, with geometry
+san_mateo <- getYostIndex(
+  geo      = "cbg",
+  year     = 2022,
+  states   = "CA",
+  scope    = "national",
+  geometry = TRUE,
+  quiet    = TRUE
+) 
+
+quintile_colors <- c(
+  "1" = "#e0f3db",
+  "2" = "#a8ddb5",
+  "3" = "#7bccc4",
+  "4" = "#43a2ca",
+  "5" = "#0868ac"
+)
+
+make_map_col <- function(data, col, title) {
+  data <- data |>
+    dplyr::mutate(q = factor(.data[[col]], levels = 1:5))
+
+  ggplot(data) +
+    geom_sf(aes(fill = q), color = "grey80", linewidth = 0.2) +
+    scale_fill_manual(
+      values       = quintile_colors,
+      name         = "Quintile",
+      labels       = c("1", "2", "3", "4", "5"),
+      drop         = FALSE,
+      na.value     = "white",
+      na.translate = FALSE
+    ) +
+    labs(title = title,
+         subtitle = "2022 ACS 5-Year Estimates | Census Block Groups") +
+    theme_void() +
+    theme(
+      plot.title    = element_text(face = "bold", size = 13, hjust = 0.5),
+      plot.subtitle = element_text(size = 9, hjust = 0.5, color = "grey40"),
+      legend.title  = element_text(size = 9),
+      legend.text   = element_text(size = 8)
+    )
+}
+
+p_base <- make_map_col(san_mateo, "YostQuintile",                  "Yost Index")
+p_stab <- make_map_col(san_mateo, "YostStabilizedImputedQuintile", "Yost Index (Stabilized + Imputed)")
+
+(p_base + p_stab) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+```
+
+---
+
+## Why the Yost Index Matters: A Confounding Example
+
+One of the most important uses of the Yost Index in health research is to control for socioeconomic confounding. Consider a study examining the relationship between environmental exposure (e.g., air pollution) and a health outcome (e.g., asthma prevalence). Both environmental exposures and health outcomes are often strongly associated with neighborhood SES:
+
+- Low-SES neighborhoods may have higher pollution exposure due to proximity to highways, industrial areas, or lack of green space
+- Low-SES neighborhoods may also have higher asthma rates due to factors like housing quality, access to healthcare, stress, and other SDOH
+
+**If we don't account for neighborhood SES, we might incorrectly attribute health effects to environmental exposure when they are actually driven (in whole or in part) by socioeconomic factors.**
+
+Let's demonstrate this with a simulated example using real Yost Index data for California census tracts.
+
+### Setup
+
+First, load the required packages:
+
+```{r setup, message=FALSE, warning=FALSE}
+library(ReproducibleYostIndex)
+library(dplyr)
+library(ggplot2)
+
+# Set seed for reproducibility
+set.seed(42)
+```
+
+### Step 1: Get the Yost Index for California
+
+We retrieve pre-computed Yost Index values for all California census tracts (2022 ACS, state scope) using `getYostIndex()`. No Census API key required.
+
+```{r get_yost}
+#| warning: false
+#| message: false
+
+yost_ca <- getYostIndex(
+  geo    = "tract",
+  year   = 2022,
+  states = "CA",
+  scope  = "state"
+)
+
+df_ca <- yost_ca
+```
+
+Now we have Yost Index values for all California tracts. Let's visualize their spatial distribution using `geometry = TRUE`:
+
+```{r display_yost}
+#| fig-align: "center"
+#| fig-width: 8
+#| fig-height: 5
+#| warning: false
+#| message: false
+
+# Download with geometry attached (cached after first call)
+yost_ca_sf <- getYostIndex(
+  geo      = "tract",
+  year     = 2022,
+  states   = "CA",
+  scope    = "state",
+  geometry = TRUE,
+  quiet    = TRUE
+)
+
+ggplot(yost_ca_sf) +
+  geom_sf(aes(fill = YostImputed), color = "white", size = 0.05) +
+  scale_fill_viridis_c(
+    option = "plasma",
+    name = "Yost Index",
+    guide = guide_colorbar(
+      barwidth = 1,
+      barheight = 15,
+      title.position = "top",
+      title.hjust = 0.5
+    )
+  ) +
+  labs(
+    title    = "Neighborhood Socioeconomic Status in California",
+    subtitle = "Yost Index (Imputed) | 2022 ACS 5-Year Estimates | State Scope",
+    caption  = "Higher values indicate higher socioeconomic status"
+  ) +
+  theme_void() +
+  theme(
+    plot.title    = element_text(face = "bold", size = 16, hjust = 0.5),
+    plot.subtitle = element_text(size = 12, hjust = 0.5, color = "grey30"),
+    plot.caption  = element_text(size = 9, hjust = 0.5, color = "grey50", margin = margin(t = 10)),
+    legend.position = "right",
+    plot.margin = margin(20, 20, 20, 20)
+  )
+```
+
+### Step 2: Simulate an Environmental Exposure
+
+Now, let's simulate an environmental exposure (e.g., air pollution PM2.5 levels) that is correlated with neighborhood SES. Lower-SES neighborhoods tend to have higher exposure due to proximity to highways, industrial areas, and other pollution sources:
+
+```{r simulate_exposure}
+# Simulate pollution exposure (higher in low-SES neighborhoods)
+# The Yost Index is scaled so higher = higher SES (range 8-12)
+# We'll create pollution that decreases as Yost increases
+
+df_ca <- df_ca %>%
+  mutate(
+    # Base pollution inversely related to Yost quintile + random variation
+    # Q1 (lowest SES) has highest pollution, Q5 (highest SES) has lowest
+    pollution_base = 14 - 1.2 * as.numeric(YostImputedQuintile) + rnorm(n(), mean = 0, sd = 1.5),
+    # Ensure realistic PM2.5 values (typically 5-20 µg/m³ in CA)
+    pollution = pmax(pollution_base, 5)
+  )
+```
+
+### Step 3: Simulate a Health Outcome
+
+Next, we simulate asthma prevalence in children. Crucially, we'll make asthma depend on **both** pollution exposure **and** neighborhood SES (through pathways other than pollution, such as housing quality, healthcare access, and stress):
+
+```{r simulate_outcome}
+# Simulate childhood asthma prevalence (%)
+# True model: asthma is caused by BOTH pollution AND low SES
+
+# Define the true effects by quintile
+# Q1 = lowest SES (highest risk), Q5 = highest SES (lowest risk)
+ses_effect <- c(8.0, 5.0, 3.0, 1.5, 0)  # % increase in asthma by quintile
+pollution_effect <- 0.4  # 0.4% increase per µg/m³ of PM2.5
+
+df_ca <- df_ca %>%
+  mutate(
+    # Baseline asthma rate + SES effect + pollution effect + random variation
+    asthma_pct =
+      6.5 +                                               # Baseline (Q5, no pollution)
+      ses_effect[YostImputedQuintile] +                   # SES effect by quintile
+      pollution_effect * (pollution - 8) +                # Pollution effect (centered at 8)
+      rnorm(n(), mean = 0, sd = 1.2),                     # Random noise
+
+    # Keep asthma rates realistic (0-25%)
+    asthma_pct = pmax(pmin(asthma_pct, 25), 0)
+  )
+```
+
+In this simulation, the **true causal structure** is:
+
+- **SES effect**: Children in Q1 (lowest SES) have 8% higher asthma rates than Q5 (highest SES), independent of pollution
+- **Pollution effect**: Each 1 µg/m³ increase in PM2.5 increases asthma by 0.4%, independent of SES
+- **Confounding**: Low-SES neighborhoods (Q1) have ~6 µg/m³ more pollution than high-SES neighborhoods (Q5)
+
+### Step 4: Visualize the Confounding Structure
+
+Before running models, let's visualize how pollution varies by SES quintile:
+
+```{r confounding_viz, fig.width=8, fig.height=5}
+# Calculate mean pollution and asthma by quintile
+quintile_summary <- df_ca %>%
+  group_by(YostImputedQuintile) %>%
+  summarise(
+    mean_pollution = mean(pollution),
+    mean_asthma = mean(asthma_pct),
+    .groups = "drop"
+  )
+
+# Create side-by-side plots
+p1 <- ggplot(quintile_summary, aes(x = factor(YostImputedQuintile), y = mean_pollution)) +
+  geom_col(fill = "coral") +
+  labs(
+    title = "Pollution by SES Quintile",
+    x = "Yost Quintile\n(1=Lowest SES, 5=Highest SES)",
+    y = "Mean PM2.5 (µg/m³)"
+  ) +
+  theme_minimal()
+
+p2 <- ggplot(quintile_summary, aes(x = factor(YostImputedQuintile), y = mean_asthma)) +
+  geom_col(fill = "steelblue") +
+  labs(
+    title = "Asthma by SES Quintile",
+    x = "Yost Quintile\n(1=Lowest SES, 5=Highest SES)",
+    y = "Mean Asthma Rate (%)"
+  ) +
+  theme_minimal()
+
+gridExtra::grid.arrange(p1, p2, ncol = 2)
+```
+
+**Key observation**: Both pollution exposure AND asthma rates are higher in lower-SES neighborhoods. This is the confounding structure we need to account for.
+
+### Step 5: Naive Analysis (Without Adjusting for SES)
+
+Let's first examine the relationship between pollution and asthma **without** controlling for neighborhood SES:
+
+```{r naive_analysis}
+# Naive model: asthma ~ pollution only
+model_naive <- lm(asthma_pct ~ pollution, data = df_ca)
+summary(model_naive)
+
+# Extract the coefficient for pollution
+coef_naive <- coef(model_naive)["pollution"]
+```
+
+```{r naive_plot, fig.width=7, fig.height=5}
+ggplot(df_ca, aes(x = pollution, y = asthma_pct)) +
+  geom_point(alpha = 0.2, size = 0.8, color = "gray40") +
+  geom_smooth(method = "lm", color = "red", se = TRUE, linewidth = 1.2) +
+  labs(
+    title = "Naive Analysis: Pollution vs. Asthma",
+    subtitle = "Without adjusting for neighborhood SES (CONFOUNDED)",
+    x = "PM2.5 Pollution (µg/m³)",
+    y = "Childhood Asthma Prevalence (%)"
+  ) +
+  theme_minimal() +
+  annotate("text", x = 16, y = 5,
+           label = paste0("Slope = ", round(coef_naive, 3), " %/µg/m³"),
+           color = "red", size = 4.5, fontface = "bold")
+```
+
+**Observation**: The naive estimate is **`r round(coef_naive, 3)`** %/µg/m³, which is substantially higher than the true effect (0.4 %/µg/m³). This overestimate occurs because the model confounds the effect of pollution with the effect of low SES.
+
+### Step 6: Adjusted Analysis Using Yost Quintiles
+
+Now, let's re-run the analysis while **stratifying by or adjusting for Yost quintiles**:
+
+```{r adjusted_analysis}
+# Model 1: Adjust for quintiles as categorical variable
+model_quintiles <- lm(asthma_pct ~ pollution + factor(YostImputedQuintile), data = df_ca)
+summary(model_quintiles)
+
+# Extract coefficients
+coef_adjusted <- coef(model_quintiles)["pollution"]
+```
+
+```{r adjusted_plot, fig.width=8, fig.height=6}
+# Plot pollution vs asthma, colored by quintile
+ggplot(df_ca, aes(x = pollution, y = asthma_pct, color = factor(YostImputedQuintile))) +
+  geom_point(alpha = 0.3, size = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, linewidth = 1) +
+  scale_color_viridis_d(
+    name = "Yost Quintile",
+    labels = c("Q1 (Lowest SES)", "Q2", "Q3", "Q4", "Q5 (Highest SES)")
+  ) +
+  labs(
+    title = "Adjusted Analysis: Pollution vs. Asthma by SES Quintile",
+    subtitle = "Controlling for neighborhood SES reveals the true pollution effect",
+    x = "PM2.5 Pollution (µg/m³)",
+    y = "Childhood Asthma Prevalence (%)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+**Result**: After adjusting for Yost quintiles, the estimated pollution effect is **`r round(coef_adjusted, 3)`** %/µg/m³, very close to the true value of 0.4 %/µg/m³.
+
+### Step 7: Compare Estimates
+
+Let's create a table and visualization comparing the naive vs. adjusted estimates:
+
+```{r comparison_table}
+# Create comparison table
+comparison <- tibble(
+  Model = c("Naive (Unadjusted)", "Adjusted for Yost Quintiles", "True Effect"),
+  `Pollution Effect (% per µg/m³)` = c(coef_naive, coef_adjusted, 0.4)
+)
+
+knitr::kable(comparison, digits = 3, caption = "Comparison of Pollution Effect Estimates")
+```
+
+```{r comparison_plot, fig.width=7, fig.height=5}
+ggplot(comparison, aes(x = Model, y = `Pollution Effect (% per µg/m³)`)) +
+  geom_col(aes(fill = Model), width = 0.6) +
+  geom_hline(yintercept = 0.4, linetype = "dashed", color = "darkgreen", linewidth = 1.2) +
+  scale_fill_manual(values = c(
+    "Naive (Unadjusted)" = "coral",
+    "Adjusted for Yost Quintiles" = "steelblue",
+    "True Effect" = "darkgreen"
+  )) +
+  labs(
+    title = "Effect of PM2.5 on Childhood Asthma: Naive vs. Adjusted",
+    subtitle = "Adjusting for Yost quintiles controls for socioeconomic confounding",
+    y = "Effect Size (% increase per µg/m³)",
+    x = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 0, hjust = 0.5)
+  )
+```
+
+### Key Takeaways
+
+This simulation demonstrates a critical point for observational health research:
+
+1. **Environmental exposures and health outcomes are often both associated with neighborhood SES**
+2. **Failing to account for SES leads to confounded estimates** (in this case, overestimating the pollution effect)
+3. **The Yost Index provides a comprehensive, validated measure of neighborhood SES** that can be used to adjust for socioeconomic confounding
+4. **After adjustment, we obtain a more accurate estimate** of the true causal effect of the exposure on the outcome
+
+In real-world studies, the Yost Index can be used in regression models, propensity score methods, or stratified analyses to account for the complex role of neighborhood socioeconomic context in shaping health outcomes.
+
+## Conclusion
+
+Social determinants of health are fundamental drivers of health disparities. The Yost Index provides a robust, validated tool for measuring neighborhood socioeconomic status in health research. The `ReproducibleYostIndex` package makes it easy to obtain Yost Index values instantly via `getYostIndex()` — no Census API key required, with local caching for repeat use.
+
+Whether you're studying environmental health, cancer epidemiology, health services research, or any field where neighborhood context matters, `ReproducibleYostIndex` provides a streamlined, reproducible workflow for incorporating socioeconomic context into your work.

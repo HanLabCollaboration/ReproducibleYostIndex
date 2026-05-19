@@ -39,7 +39,7 @@ of the CSV. Defaults to \code{FALSE}.}
 
 \item{cache}{Logical. If \code{TRUE} (default), saves the downloaded file
 to the user-level R cache directory
-(\code{tools::R_user_dir("ReproduceYostIndex", "cache")}) so the download is
+(\code{tools::R_user_dir("ReproducibleYostIndex", "cache")}) so the download is
 skipped on subsequent calls.}
 
 \item{quiet}{Logical. If \code{TRUE}, suppresses all messages.
@@ -57,7 +57,7 @@ a \code{geometry} column (WGS 84 / EPSG:4326).
 \description{
 A fast, Census-API-free alternative to \code{\link{computeYostIndex}} that
 retrieves pre-computed Yost Index values directly from the
-\href{https://github.com/HanLabCollaboration/ReproduceYostIndex-data}{ReproduceYostIndex-data}
+\href{https://github.com/HanLabCollaboration/ReproducibleYostIndex-data}{ReproducibleYostIndex-data}
 GitHub repository.
 
 Pre-computed files cover \strong{county}, \strong{tract}, and

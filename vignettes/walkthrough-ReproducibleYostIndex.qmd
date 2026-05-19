@@ -1,0 +1,329 @@
+---
+title: "ReproducibleYostIndex Walkthrough"
+author: " Rafael Catoia Pulgrossi | [QSU](https://med.stanford.edu/qsu 'View website') | [Tae Yoon Lee](https://profiles.stanford.edu/tae-yoon-lee 'View website') | [Summer Han](https://med.stanford.edu/summerhanlab.html 'View website')"
+date: today
+format:
+  html:
+    self-contained: true
+    theme: united
+    toc: true
+    toc-expand: 4
+    toc-depth: 4
+    code-fold: true
+    toc-title: 'Contents'
+    page-layout: full
+    grid:
+      body-width: 1440px
+      gutter-width: 1.5rem
+execute:
+  freeze: true
+editor_options:
+  chunk_output_type: console
+---
+
+```{r}
+#| include: false
+library(ReproducibleYostIndex)
+library(ggplot2)
+library(dplyr)
+library(sf)
+```
+
+## Two Ways to Get Yost Index Data
+
+`ReproducibleYostIndex` provides two functions that serve different needs:
+
+| | `getYostIndex()` | `computeYostIndex()` |
+|---|---|---|
+| **Census API key** | Not required | Required |
+| **Speed** | Instant (pre-computed) | Minutes to hours |
+| **Geographies** | County, tract, block group | County, tract, block group, state |
+| **Scope** | National, state | National, state, county |
+| **Variants returned** | Four YostIndex possible versions (Raw/Stabilized/Imputed/Stabilized+Imputed) | One (your chosen parameters) |
+| **Best for** | Most analyses, quick exploration | Custom pipelines |
+
+**Start with `getYostIndex()`**. It downloads pre-computed files from GitHub — no Census API key, no wait, all four Yost variants in a single call. Switch to `computeYostIndex()` only when you need a county-level scope, intermediate outputs, or a fully custom pipeline.
+
+---
+
+## `getYostIndex()` — Recommended Starting Point
+
+### Installation
+
+```r
+# install.packages("devtools")
+devtools::install_github("HanLabCollaboration/ReproducibleYostIndex")
+```
+
+### Basic usage
+
+```{r getyostindex_basic}
+#| eval: true
+#| message: false
+
+library(ReproducibleYostIndex)
+
+# All US counties, 2022 — no Census API key needed
+county_yost <- getYostIndex(geo = "county", year = 2022)
+county_yost |>  head(10) |> DT::datatable()
+```
+
+A single call returns **four Yost Index options** side by side:
+
+| Column | Description |
+|---|---|
+| `Yost` / `YostQuintile` | Baseline — no stabilization, no imputation |
+| `YostStabilized` / `YostStabilizedQuintile` | Stabilization applied |
+| `YostImputed` / `YostImputedQuintile` | Spatial imputation for missing values |
+| `YostStabilizedImputed` / `YostStabilizedImputedQuintile` | Both stabilization and imputation |
+
+### Filtering by state and scope
+
+```{r getyostindex_filter}
+#| eval: true
+#| message: false
+
+# Tracts for California and New York, ranked within each state
+tracts_ca_ny <- getYostIndex(
+  geo    = "tract",
+  year   = 2022,
+  states = c("CA", "NY"),
+  scope  = "national"
+)
+glimpse(tracts_ca_ny)
+```
+
+### Choosing a scope
+
+- **`"national"`** (default): harmonizes US geographies (state,counties,tracts or census block groups) against each other and performs only one factor analysis.
+- **`"state"`**: harmonizes and performs factor analysis separately for each state.
+- **`"county"`**: harmonizes and performs factor analysis separately for each county.
+
+
+### Choosing a Yost variant
+
+Pick the column that fits your analysis:
+
+```{r getyostindex_variants}
+#| eval: true
+#| message: false
+
+df <- getYostIndex(geo = "county", year = 2022, states = "CA")
+
+# For most county/tract analyses: plain Yost
+hist(df$Yost, main = "Yost (baseline)", xlab = "Yost score", col = "steelblue", border = "white")
+
+# For block groups or small-sample tracts: stabilized variant
+# df$YostStabilized  — shrinks unreliable estimates toward their parent geography
+
+# When there are many NAs: imputed variant
+# df$YostImputed     — fills missing values via spatial mean of neighbors
+```
+
+### Caching
+
+Files are downloaded once and cached locally. Subsequent calls with the same arguments return instantly:
+
+```{r getyostindex_cache}
+#| eval: false
+
+# First call: downloads ~2 MB file
+df <- getYostIndex(geo = "county", year = 2022)
+
+# Second call: reads from cache — instantaneous
+df <- getYostIndex(geo = "county", year = 2022)
+
+# Force a fresh download
+df <- getYostIndex(geo = "county", year = 2022, cache = FALSE)
+
+# See where the cache lives
+tools::R_user_dir("ReproducibleYostIndex", "cache")
+```
+
+---
+
+## `computeYostIndex()` — Full Pipeline
+
+Use `computeYostIndex()` when:
+- You need **county-level scope** (quintiles & factor within each county)
+- You want to **inspect intermediate outputs** (raw ACS values, factor loadings, imputed data,the 7 yost variables)
+- You are building a **custom pipeline** and need fine-grained control. You may choose to change from `rank` to `standardize`, or to use `average` instead of weighted average per `total_population`
+
+### Census API key (required)
+
+```r
+# Get a free key at: https://api.census.gov/data/key_signup.html
+tidycensus::census_api_key("YOUR_KEY_HERE", install = TRUE)
+```
+
+### Basic usage
+
+```{r computeyost_basic}
+#| eval: true
+#| results: hide
+#| message: false
+#| warning: false
+
+yost_ca <- computeYostIndex(
+  geo       = "tract",
+  year      = 2022,
+  states    = "CA",
+  scope     = "state",
+  stabilize = TRUE,    # empirical Bayes stabilization
+  impute    = TRUE,    # spatial imputation for missing values
+  keep_geometry = TRUE
+)
+```
+
+```{r computeyost_output}
+#| eval: true
+
+# Baseline (always present — no stabilization, no imputation)
+head(yost_ca$df_yost_raw)
+
+# Requested variant (stabilize = TRUE, impute = TRUE)
+head(yost_ca$df_yost)
+```
+
+### Understanding the output list
+
+```{r computeyost_structure}
+#| eval: true
+
+str(yost_ca, max.level = 1)
+```
+
+| Element | Contents |
+|---|---|
+| `df_yost_raw` | Baseline Yost — always `Yost` + `YostQuintile`, regardless of parameters |
+| `df_yost` | Requested variant — column name reflects what was applied |
+| `df_raw_values` | Raw ACS estimates and margins of error |
+| `df_geometry` | Spatial geometries (if `keep_geometry = TRUE`) |
+| `df_imputed` | Component variables after imputation |
+| `df_rank` | Ranked/standardized inputs to factor analysis |
+| `obj_factor` | `psych::fa` object(s) |
+
+### Stabilization explained
+
+At fine geographic levels (especially block groups), ACS margins of error can exceed the estimates themselves. The empirical Bayes stabilization method pulls each lower-level estimate toward its parent geography using a data-adaptive weight:
+
+$$w = \frac{t^2}{s^2 + t^2}$$
+
+- $t^2$: within-parent heterogeneity — how much the units in this parent actually differ
+- $s^2 = (\text{MOE}/1.645)^2$: sampling variance from the ACS margin of error
+
+When a unit is **reliable** ($s^2$ small), $w \approx 1$ — the estimate is used as-is.
+When a unit is **noisy** ($s^2$ large), $w \approx 0$ — the estimate is pulled toward the parent.
+
+```{r stabilize_compare}
+#| eval: true
+#| fig-align: "center"
+#| fig-width: 7
+#| fig-height: 5
+
+# Compare raw vs stabilized
+comparison <- yost_ca$df_yost_raw |>
+  dplyr::rename(Yost_raw = Yost) |>
+  dplyr::left_join(
+    yost_ca$df_yost |>
+      dplyr::rename(Yost_stabilized = YostStabilizedImputed),
+    by = c("GEOID", "annotation")
+  )
+
+ggplot(comparison, aes(x = Yost_raw, y = Yost_stabilized)) +
+  geom_point(alpha = 0.15, size = 0.6, color = "steelblue") +
+  geom_abline(slope = 1, intercept = 0, color = "red",
+              linetype = "dashed", linewidth = 0.8) +
+  labs(
+    title    = "Raw vs. Stabilized Yost Index (CA tracts, 2022)",
+    subtitle = "Points off the diagonal were pulled toward their parent geography",
+    x        = "Yost (raw, no stabilization)",
+    y        = "YostStabilizedImputed",
+    caption  = "Red line = no change"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(plot.title    = element_text(face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5, color = "grey40"))
+```
+
+### Mapping with `computeYostIndex()`
+
+Because `computeYostIndex()` can return geometry directly, mapping is straightforward:
+
+```{r computeyost_map}
+#| eval: true
+#| fig-align: "center"
+#| fig-width: 8
+#| fig-height: 5
+
+df_map <- yost_ca$df_geometry |>
+  dplyr::left_join(yost_ca$df_yost, by = "GEOID")
+
+ggplot(df_map) +
+  geom_sf(aes(fill = YostStabilizedImputed), color = "white", linewidth = 0.02) +
+  scale_fill_viridis_c(option = "plasma", name = "Yost\n(Stabilized)") +
+  labs(
+    title    = "Neighborhood SES — California Census Tracts",
+    subtitle = "YostStabilizedImputed | 2022 ACS | State scope",
+    caption  = "Higher values = higher socioeconomic status"
+  ) +
+  theme_void() +
+  theme(
+    plot.title    = element_text(face = "bold", size = 15, hjust = 0.5),
+    plot.subtitle = element_text(size = 11, hjust = 0.5, color = "grey40"),
+    plot.caption  = element_text(hjust = 0.5, color = "grey60")
+  )
+```
+
+### When to use `scope = "county"`
+
+County-level scope is only available in `computeYostIndex()`. It ranks geographies within each county, which is useful for within-county resource allocation or studies confined to a single metro area:
+
+```{r computeyost_county_scope}
+#| eval: false
+
+# Tracts in Los Angeles County ranked among themselves
+yost_la <- computeYostIndex(
+  geo    = "tract",
+  year   = 2022,
+  states = "CA",
+  scope  = "county"   # not available in getYostIndex()
+)
+```
+
+---
+
+## Decision Guide
+
+```{r decision_guide}
+#| echo: false
+
+knitr::kable(data.frame(
+  Question = c(
+    "Do I have a Census API key?",
+    "Do I need county-level scope?",
+    "Do I need intermediate outputs (raw ACS, factor loadings)?",
+    "Am I doing a quick analysis or teaching?"
+  ),
+  `If YES` = c(
+    "Either function works",
+    "Use computeYostIndex()",
+    "Use computeYostIndex()",
+    "Use getYostIndex()"
+  ),
+  `If NO` = c(
+    "Use getYostIndex()",
+    "Use getYostIndex()",
+    "Use getYostIndex()",
+    "Use computeYostIndex() for full control"
+  )
+), col.names = c("Question", "If YES →", "If NO →"))
+```
+
+---
+
+## Further Reading
+
+- Yost K, et al. (2001). Socioeconomic status and breast cancer incidence in California. *Cancer Causes & Control*, 12(8), 703–711.
+- Yang J, et al. (2014). Developing an area-based socioeconomic measure from ACS data. *Cancer Prevention Research*, 7(7).
+- Package source: <https://github.com/HanLabCollaboration/ReproducibleYostIndex>

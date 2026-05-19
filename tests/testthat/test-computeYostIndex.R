@@ -1,5 +1,5 @@
 library(testthat)
-library(ReproduceYostIndex) # This will load your package
+library(ReproducibleYostIndex) # This will load your package
 library(vcr)
 
 # Set up vcr to store cassettes in the "tests/fixtures/vcr_cassettes" directory
@@ -17,7 +17,7 @@ test_that("computeYostIndex handles bad inputs", {
   # Test bad year
   expect_error(
     computeYostIndex(geo = "tract", year = 2005, states = "CA"),
-    "year >= 2011"
+    ">= 2011"
   )
 
   # Test bad rescale
@@ -29,7 +29,7 @@ test_that("computeYostIndex handles bad inputs", {
   # Test bad year/geo combination
   expect_error(
     computeYostIndex(geo = "block group", year = 2011, states = "CA"),
-    "geo %in% c"
+    ">= 2013"
   )
 })
 
@@ -86,6 +86,7 @@ test_that("computeYostIndex minimal return format works", {
     yost_minimal <- computeYostIndex(
       geo = "county",
       year = 2022,
+      scope = "state",
       states = "CA",
       impute = FALSE,
       return_format = "minimal", # Test this argument
@@ -167,23 +168,14 @@ test_that("computeYostIndex works with scope = 'county'", {
   expect_true(all(grepl(", Rhode Island$", county_names)))
 })
 
-# --- Test 6: Test scope = "national" sets states to 'all' ---
-test_that("computeYostIndex with scope = 'national' uses all states", {
-
-  # This should trigger a message about pulling all states
+# --- Test 6: scope = "national" message check (no API call) ---
+test_that("computeYostIndex with scope = 'national' emits expected message", {
   expect_message(
-    {
-      vcr::use_cassette("yost-national-scope", {
-        yost_national <- computeYostIndex(
-          geo = "state",
-          year = 2022,
-          scope = "national",  # Should override states
-          states = "CA",       # This should be ignored
-          impute = FALSE,
-          quiet = FALSE
-        )
-      })
-    },
+    suppressWarnings(try(
+      computeYostIndex(geo = "state", year = 2022, scope = "national",
+                       states = "CA", impute = FALSE, quiet = FALSE),
+      silent = TRUE
+    )),
     "Since the scope == 'national', it will pull all states"
   )
 })
@@ -195,6 +187,7 @@ test_that("computeYostIndex performs weighted imputation with tot_pop", {
     yost_imputed <- computeYostIndex(
       geo = "tract",
       year = 2022,
+      scope = "state",
       states = "RI",
       impute = TRUE,
       weight_var = "tot_pop",
@@ -216,6 +209,7 @@ test_that("computeYostIndex performs unweighted imputation", {
     yost_imputed <- computeYostIndex(
       geo = "tract",
       year = 2022,
+      scope = "state",
       states = "RI",
       impute = TRUE,
       weight_var = "none",
@@ -236,6 +230,7 @@ test_that("computeYostIndex rejects invalid state abbreviations", {
     computeYostIndex(
       geo = "county",
       year = 2022,
+      scope = "state",
       states = c("CA", "XYZ"),  # XYZ is not valid
       quiet = TRUE
     ),
@@ -278,6 +273,7 @@ test_that("computeYostIndex works with rescale = 'standardize'", {
     yost_std <- computeYostIndex(
       geo = "county",
       year = 2022,
+      scope = "state",
       states = "RI",
       rescale = "standardize",
       impute = FALSE,
@@ -297,6 +293,7 @@ test_that("computeYostIndex respects keep_geometry parameter", {
     yost_no_geom <- computeYostIndex(
       geo = "county",
       year = 2022,
+      scope = "state",
       states = "RI",
       impute = FALSE,
       keep_geometry = FALSE,
@@ -312,12 +309,19 @@ test_that("computeYostIndex respects keep_geometry parameter", {
 
 # --- Test 13: Test cbg alias for block group ---
 test_that("computeYostIndex accepts 'cbg' as alias for 'block group'", {
+  vcr::use_cassette("yost-cbg-ca", {
+    yost_cbg <- computeYostIndex(
+      geo = "cbg",
+      year = 2022,
+      scope = "state",
+      states = "CA",
+      impute = FALSE,
+      quiet = TRUE
+    )
+  })
 
-  # Should not error - cbg is a valid alias
-  expect_error(
-    computeYostIndex(geo = "cbg", year = 2022, states = "CA"),
-    NA  # No error expected, but this will fail validation for year/geo combo if year < 2013
-  )
+  expect_type(yost_cbg, "list")
+  expect_true("df_yost" %in% names(yost_cbg))
 })
 
 # --- Test 14: Test that YostQuintile is properly factored ---
@@ -327,6 +331,7 @@ test_that("computeYostIndex creates proper quintile factors", {
     yost_data <- computeYostIndex(
       geo = "county",
       year = 2022,
+      scope = "state",
       states = "CA",
       impute = FALSE,
       quiet = TRUE
@@ -350,6 +355,7 @@ test_that("computeYostIndex always returns df_yost_raw with Yost and YostQuintil
     yost_data <- computeYostIndex(
       geo = "county",
       year = 2022,
+      scope = "state",
       states = "CA",
       impute = FALSE,
       quiet = TRUE
@@ -370,7 +376,7 @@ test_that("computeYostIndex names df_yost columns based on shrink/impute", {
 
     # shrink=F, impute=F -> Yost
     result_none <- computeYostIndex(
-      geo = "county", year = 2022, states = "CA",
+      geo = "county", year = 2022, scope = "state", states = "CA",
       stabilize = FALSE, impute = FALSE, quiet = TRUE
     )
     expect_true("Yost" %in% colnames(result_none$df_yost))
@@ -382,7 +388,7 @@ test_that("computeYostIndex names df_yost columns based on shrink/impute", {
 
     # shrink=F, impute=T -> YostImputed
     result_imputed <- computeYostIndex(
-      geo = "tract", year = 2022, states = "RI",
+      geo = "tract", year = 2022, scope = "state", states = "RI",
       stabilize = FALSE, impute = TRUE, quiet = TRUE
     )
     expect_true("YostImputed" %in% colnames(result_imputed$df_yost))
@@ -397,7 +403,7 @@ test_that("df_yost_raw equals df_yost when shrink=FALSE and impute=FALSE", {
   vcr::use_cassette("yost-ca-county", {
 
     result <- computeYostIndex(
-      geo = "county", year = 2022, states = "CA",
+      geo = "county", year = 2022, scope = "state", states = "CA",
       stabilize = FALSE, impute = FALSE, quiet = TRUE
     )
 

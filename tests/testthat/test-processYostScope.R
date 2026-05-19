@@ -1,5 +1,5 @@
 library(testthat)
-library(ReproduceYostIndex)
+library(ReproducibleYostIndex)
 library(sf)
 library(dplyr)
 
@@ -60,7 +60,7 @@ test_that("processYostScope handles complete data without imputation", {
   mock_data <- create_mock_yost_data(n_rows = 30, add_geometry = FALSE, add_missing = FALSE)
 
   # Run processYostScope
-  result <- ReproduceYostIndex:::processYostScope(
+  result <- ReproducibleYostIndex:::processYostScope(
     yost_data_sub = mock_data,
     impute_sub = FALSE,
     rescale_sub = "rank",
@@ -98,7 +98,7 @@ test_that("processYostScope handles data with imputation (geometry required)", {
   mock_data <- create_mock_yost_data(n_rows = 30, add_geometry = TRUE, add_missing = TRUE)
 
   # Run processYostScope with imputation
-  result <- ReproduceYostIndex:::processYostScope(
+  result <- ReproducibleYostIndex:::processYostScope(
     yost_data_sub = mock_data,
     impute_sub = TRUE,
     rescale_sub = "rank",
@@ -121,7 +121,7 @@ test_that("processYostScope respects rescale = 'standardize'", {
 
   mock_data <- create_mock_yost_data(n_rows = 30, add_geometry = FALSE, add_missing = FALSE)
 
-  result <- ReproduceYostIndex:::processYostScope(
+  result <- ReproducibleYostIndex:::processYostScope(
     yost_data_sub = mock_data,
     impute_sub = FALSE,
     rescale_sub = "standardize",
@@ -150,7 +150,7 @@ test_that("processYostScope handles insufficient data gracefully", {
 
   # Expect a warning about insufficient observations
   expect_warning(
-    result <- ReproduceYostIndex:::processYostScope(
+    result <- ReproducibleYostIndex:::processYostScope(
       yost_data_sub = mock_data,
       impute_sub = FALSE,
       rescale_sub = "rank",
@@ -171,7 +171,7 @@ test_that("processYostScope annotations are correct", {
 
   mock_data <- create_mock_yost_data(n_rows = 30, add_geometry = FALSE, add_missing = FALSE)
 
-  result <- ReproduceYostIndex:::processYostScope(
+  result <- ReproducibleYostIndex:::processYostScope(
     yost_data_sub = mock_data,
     impute_sub = FALSE,
     rescale_sub = "rank",
@@ -198,7 +198,7 @@ test_that("processYostScope drops geometry from tabular outputs", {
 
   mock_data <- create_mock_yost_data(n_rows = 30, add_geometry = TRUE, add_missing = FALSE)
 
-  result <- ReproduceYostIndex:::processYostScope(
+  result <- ReproducibleYostIndex:::processYostScope(
     yost_data_sub = mock_data,
     impute_sub = FALSE,
     rescale_sub = "rank",
@@ -222,7 +222,7 @@ test_that("processYostScope factor sign is aligned with income", {
 
   mock_data <- create_mock_yost_data(n_rows = 30, add_geometry = FALSE, add_missing = FALSE)
 
-  result <- ReproduceYostIndex:::processYostScope(
+  result <- ReproducibleYostIndex:::processYostScope(
     yost_data_sub = mock_data,
     impute_sub = FALSE,
     rescale_sub = "rank",

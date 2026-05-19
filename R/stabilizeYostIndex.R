@@ -37,12 +37,12 @@
 #' @return
 #' A data frame with the original variables plus:
 #' \itemize{
-#'   \item `{var}_parent`: Parent-level values
-#'   \item `{var}_sqdiff`: Sum of squared differences within parent
-#'   \item `{var}_s2`: Estimated sampling variance from MOE
-#'   \item `{var}_wgt`: Stabilization weight
-#'   \item `{var}_stabilized`: Stabilized estimate
-#'   \item `stabilizedflg_{var}`: Indicator (1 = stabilization applied, 0 = not applied)
+#'   \item \code{<var>_parent}: Parent-level values
+#'   \item \code{<var>_sqdiff}: Sum of squared differences within parent
+#'   \item \code{<var>_s2}: Estimated sampling variance from MOE
+#'   \item \code{<var>_wgt}: Stabilization weight
+#'   \item \code{<var>_stabilized}: Stabilized estimate
+#'   \item \code{stabilizedflg_<var>}: Indicator (1 = stabilization applied, 0 = not applied)
 #' }
 #'
 #' @examples

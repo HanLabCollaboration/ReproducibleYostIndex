@@ -1,4 +1,4 @@
-Package: ReproduceYostIndex
+Package: ReproducibleYostIndex
 Title: Reproducing the Yost Index of Neighborhood Socioeconomic Status
 Version: 0.0.0.9000
 Authors@R: c(
@@ -11,19 +11,19 @@ Description: Provides a simple, tidy interface for calculating the Yost Index,
     (county, tract, block group), empirical Bayes stabilization, and optional spatial imputation.
 License: MIT + file LICENSE.md
 Encoding: UTF-8
-URL: https://github.com/HanLabCollaboration/ReproduceYostIndex
-BugReports: https://github.com/HanLabCollaboration/ReproduceYostIndex/issues
+URL: https://github.com/HanLabCollaboration/ReproducibleYostIndex
+BugReports: https://github.com/HanLabCollaboration/ReproducibleYostIndex/issues
 RoxygenNote: 7.3.2
 Imports:
     dplyr,
     tidycensus,
     glue,
+    httr2,
     purrr,
     magrittr,
     readr,
     sf,
     spdep,
-    data.table,
     psych,
     tidyr,
     stringr,
@@ -32,6 +32,7 @@ Suggests:
     knitr,
     rmarkdown,
     testthat (>= 3.0.0),
+    vcr,
     ggplot2,
     gridExtra
 Depends:

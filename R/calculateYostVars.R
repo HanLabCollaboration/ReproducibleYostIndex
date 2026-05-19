@@ -121,7 +121,7 @@ calculateYostVars <- function(data, acs_vars, stabilize_sub = FALSE) {
 
   data_calculated_out <- data_calculated |>
     dplyr::mutate(dplyr::across(dplyr::where(is.numeric), ~ ifelse(is.nan(.), NA, .))) |>
-    dplyr::select(-edu1, -edu2, -edu3, dplyr::any_of(c("edu1_moe", "edu2_moe", "edu3_moe")))
+    dplyr::select(-edu1, -edu2, -edu3, -dplyr::any_of(c("edu1_moe", "edu2_moe", "edu3_moe")))
 
   return(data_calculated_out)
 }

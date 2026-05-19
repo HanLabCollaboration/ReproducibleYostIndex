@@ -1,5 +1,5 @@
 library(testthat)
-library(ReproduceYostIndex)
+library(ReproducibleYostIndex)
 
 # =============================================================================
 # test-getYostIndex.R
@@ -29,14 +29,14 @@ test_that("getYostIndex rejects invalid scope", {
 test_that("getYostIndex rejects year too early for county/tract", {
   expect_error(
     getYostIndex(geo = "county", year = 2010),
-    "starts at year 2011"
+    "2011 onwards"
   )
 })
 
 test_that("getYostIndex rejects year too early for block group", {
   expect_error(
     getYostIndex(geo = "block group", year = 2012),
-    "starts at year 2013"
+    "2013 onwards"
   )
 })
 
@@ -58,7 +58,7 @@ test_that("getYostIndex accepts 'cbg' as alias for 'block group'", {
   # Should fail on year range, not on geo validation — confirming cbg is accepted
   expect_error(
     getYostIndex(geo = "cbg", year = 2012),
-    "starts at year 2013"
+    "2013 onwards"
   )
 })
 
@@ -71,16 +71,17 @@ test_that("getYostIndex returns correct structure for county/national", {
 
   expect_s3_class(df, "data.frame")
   expect_named(df, c(
-    "GEOID", "year", "geo", "scope",
+    "GEOID", "NAME", "year", "geo", "scope",
     "Yost", "YostQuintile",
     "YostStabilized", "YostStabilizedQuintile",
     "YostImputed", "YostImputedQuintile",
     "YostStabilizedImputed", "YostStabilizedImputedQuintile"
   ))
-  expect_equal(nrow(df), 3143)  # all US counties
+  expect_equal(nrow(df), 3144)  # all US counties
   expect_true(all(df$geo == "county"))
   expect_true(all(df$scope == "national"))
   expect_true(all(df$year == 2022))
+  expect_s3_class(df$YostQuintile, "ordered")
 })
 
 test_that("getYostIndex returns rows sorted by GEOID", {
@@ -100,16 +101,33 @@ test_that("getYostIndex state filter returns only matching GEOIDs", {
   expect_gt(nrow(df), 0)
 })
 
-test_that("getYostIndex returns all quintile values in 1:5 range", {
+test_that("getYostIndex returns quintile columns as ordered factors with levels 1:5", {
   skip_if_offline()
 
   df <- getYostIndex(geo = "county", year = 2022, quiet = TRUE)
 
-  check_quintile <- function(x) all(x[!is.na(x)] %in% 1:5)
-  expect_true(check_quintile(df$YostQuintile))
-  expect_true(check_quintile(df$YostStabilizedQuintile))
-  expect_true(check_quintile(df$YostImputedQuintile))
-  expect_true(check_quintile(df$YostStabilizedImputedQuintile))
+  quintile_cols <- c("YostQuintile", "YostStabilizedQuintile",
+                     "YostImputedQuintile", "YostStabilizedImputedQuintile")
+  for (col in quintile_cols) {
+    expect_s3_class(df[[col]], "ordered")
+    expect_equal(levels(df[[col]]), as.character(1:5))
+  }
+})
+
+test_that("getYostIndex Yost and quintile columns may contain NA", {
+  skip_if_offline()
+
+  df <- getYostIndex(geo = "county", year = 2022, quiet = TRUE)
+
+  yost_cols <- c(
+    "Yost", "YostQuintile",
+    "YostStabilized", "YostStabilizedQuintile",
+    "YostImputed", "YostImputedQuintile",
+    "YostStabilizedImputed", "YostStabilizedImputedQuintile"
+  )
+  for (col in yost_cols) {
+    expect_true(anyNA(df[[col]]), label = glue::glue("{col} can have NA"))
+  }
 })
 
 test_that("getYostIndex uses cache on second call", {

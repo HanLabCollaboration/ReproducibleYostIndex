@@ -39,7 +39,7 @@ test_that("calculateYostVars computes variables correctly", {
   )
 
   # Run the function
-  out_calc <- ReproduceYostIndex:::calculateYostVars(raw_data, acs_vars)
+  out_calc <- ReproducibleYostIndex:::calculateYostVars(raw_data, acs_vars)
 
   # Test the results
   expect_equal(out_calc$tot_pop, 1000)
@@ -100,7 +100,7 @@ test_that("calculateYostVars handles division by zero correctly", {
   )
 
   # Run the function
-  out_calc <- ReproduceYostIndex:::calculateYostVars(raw_data, acs_vars)
+  out_calc <- ReproducibleYostIndex:::calculateYostVars(raw_data, acs_vars)
 
   # Division by zero produces Inf or NaN, which should be converted to NA
   # But rowSums()/0 when rowSums() returns a non-zero value produces Inf
@@ -160,7 +160,7 @@ test_that("calculateYostVars removes intermediate education variables", {
     B25077_001E = 300000
   )
 
-  out_calc <- ReproduceYostIndex:::calculateYostVars(raw_data, acs_vars)
+  out_calc <- ReproducibleYostIndex:::calculateYostVars(raw_data, acs_vars)
 
   # edu1, edu2, edu3 should be removed
   expect_false("edu1" %in% colnames(out_calc))
@@ -210,7 +210,7 @@ test_that("calculateYostVars with stabilize_sub = TRUE produces MOE columns", {
     B25077_001E    = 300000, B25077_001M = 15000
   )
 
-  out_calc <- ReproduceYostIndex:::calculateYostVars(raw_data, acs_vars, stabilize_sub = TRUE)
+  out_calc <- ReproducibleYostIndex:::calculateYostVars(raw_data, acs_vars, stabilize_sub = TRUE)
 
   # MOE columns should be present for all 7 Yost variables
   expected_moe_cols <- c("tot_pop_moe", "income_moe", "wkcls_moe", "unemp_moe",
@@ -258,7 +258,7 @@ test_that("calculateYostVars without stabilize_sub produces no MOE columns", {
     B25064_001E = 1500, B25077_001E = 300000
   )
 
-  out_calc <- ReproduceYostIndex:::calculateYostVars(raw_data, acs_vars, stabilize_sub = FALSE)
+  out_calc <- ReproducibleYostIndex:::calculateYostVars(raw_data, acs_vars, stabilize_sub = FALSE)
 
   # No MOE columns should be present
   moe_cols <- colnames(out_calc)[grepl("_moe$", colnames(out_calc))]
@@ -304,7 +304,7 @@ test_that("calculateYostVars preserves GEOID and other columns", {
     B25077_001E = 300000
   )
 
-  out_calc <- ReproduceYostIndex:::calculateYostVars(raw_data, acs_vars)
+  out_calc <- ReproducibleYostIndex:::calculateYostVars(raw_data, acs_vars)
 
   # Original columns should be preserved
   expect_true("GEOID" %in% colnames(out_calc))

@@ -1,5 +1,5 @@
 library(testthat)
-library(ReproduceYostIndex)
+library(ReproducibleYostIndex)
 library(vcr)
 
 # Note: fetchYostAcs is an internal function, so we use ::: to access it
@@ -7,7 +7,7 @@ library(vcr)
 test_that("fetchYostAcs returns data with correct structure (county level)", {
 
   vcr::use_cassette("fetch-yost-acs-county", {
-    result <- ReproduceYostIndex:::fetchYostAcs(
+    result <- ReproducibleYostIndex:::fetchYostAcs(
       geo = "county",
       year = 2022,
       states = "CA",
@@ -40,7 +40,7 @@ test_that("fetchYostAcs returns data with correct structure (county level)", {
 test_that("fetchYostAcs returns data with geometry when requested", {
 
   vcr::use_cassette("fetch-yost-acs-county-geom", {
-    result <- ReproduceYostIndex:::fetchYostAcs(
+    result <- ReproducibleYostIndex:::fetchYostAcs(
       geo = "county",
       year = 2022,
       states = "CA",
@@ -56,7 +56,7 @@ test_that("fetchYostAcs returns data with geometry when requested", {
 test_that("fetchYostAcs works for tract geography", {
 
   vcr::use_cassette("fetch-yost-acs-tract", {
-    result <- ReproduceYostIndex:::fetchYostAcs(
+    result <- ReproducibleYostIndex:::fetchYostAcs(
       geo = "tract",
       year = 2022,
       states = "RI",  # Use a small state for faster testing
@@ -72,7 +72,7 @@ test_that("fetchYostAcs works for tract geography", {
 test_that("fetchYostAcs works for state geography", {
 
   vcr::use_cassette("fetch-yost-acs-state", {
-    result <- ReproduceYostIndex:::fetchYostAcs(
+    result <- ReproducibleYostIndex:::fetchYostAcs(
       geo = "state",
       year = 2022,
       states = c("CA", "NY"),  # Multiple states
@@ -90,7 +90,7 @@ test_that("fetchYostAcs works for state geography", {
 test_that("fetchYostAcs handles multiple states", {
 
   vcr::use_cassette("fetch-yost-acs-multi-state", {
-    result <- ReproduceYostIndex:::fetchYostAcs(
+    result <- ReproducibleYostIndex:::fetchYostAcs(
       geo = "county",
       year = 2022,
       states = c("RI", "VT"),  # Two small states
@@ -109,7 +109,7 @@ test_that("fetchYostAcs handles multiple states", {
 test_that("fetchYostAcs attribute contains all required variable names", {
 
   vcr::use_cassette("fetch-yost-acs-vars-check", {
-    result <- ReproduceYostIndex:::fetchYostAcs(
+    result <- ReproducibleYostIndex:::fetchYostAcs(
       geo = "county",
       year = 2022,
       states = "CA",
@@ -140,7 +140,7 @@ test_that("fetchYostAcs attribute contains all required variable names", {
 test_that("fetchYostAcs returns both estimate (E) and MOE (M) columns", {
 
   vcr::use_cassette("fetch-yost-acs-estimates-only", {
-    result <- ReproduceYostIndex:::fetchYostAcs(
+    result <- ReproducibleYostIndex:::fetchYostAcs(
       geo = "county",
       year = 2022,
       states = "CA",

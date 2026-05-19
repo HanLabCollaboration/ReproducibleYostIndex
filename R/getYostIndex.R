@@ -3,7 +3,7 @@
 #' @description
 #' A fast, Census-API-free alternative to \code{\link{computeYostIndex}} that
 #' retrieves pre-computed Yost Index values directly from the
-#' \href{https://github.com/HanLabCollaboration/ReproduceYostIndex-data}{ReproduceYostIndex-data}
+#' \href{https://github.com/HanLabCollaboration/ReproducibleYostIndex-data}{ReproducibleYostIndex-data}
 #' GitHub repository.
 #'
 #' Pre-computed files cover \strong{county}, \strong{tract}, and
@@ -40,7 +40,7 @@
 #'   of the CSV. Defaults to \code{FALSE}.
 #' @param cache Logical. If \code{TRUE} (default), saves the downloaded file
 #'   to the user-level R cache directory
-#'   (\code{tools::R_user_dir("ReproduceYostIndex", "cache")}) so the download is
+#'   (\code{tools::R_user_dir("ReproducibleYostIndex", "cache")}) so the download is
 #'   skipped on subsequent calls.
 #' @param quiet Logical. If \code{TRUE}, suppresses all messages.
 #'   Defaults to \code{FALSE}.
@@ -122,7 +122,7 @@ getYostIndex <- function(
     stop(glue::glue(
       "Pre-computed data is available through year {year_max} (got year = {year}). ",
       "This year may not yet be released. ",
-      "Please check https://github.com/HanLabCollaboration/ReproduceYostIndex-data/releases ",
+      "Please check https://github.com/HanLabCollaboration/ReproducibleYostIndex-data/releases ",
       "for a newer release."
     ))
   }
@@ -144,27 +144,31 @@ getYostIndex <- function(
   # /releases/latest redirect. Used only to namespace the local cache so a
   # new release invalidates stale files. Falls back to "latest" if offline.
   resolve_latest_tag <- function() {
-    url <- "https://github.com/HanLabCollaboration/ReproduceYostIndex-data/releases/latest"
-    hdrs <- tryCatch(
-      utils::curlGetHeaders(url, redirect = FALSE),
+    url <- "https://github.com/HanLabCollaboration/ReproducibleYostIndex-data/releases/latest"
+    resp <- tryCatch(
+      httr2::request(url) |>
+        httr2::req_method("HEAD") |>
+        httr2::req_options(followlocation = FALSE) |>
+        httr2::req_error(is_error = \(r) FALSE) |>
+        httr2::req_perform(),
       error = function(e) NULL
     )
-    if (is.null(hdrs)) return("latest")
-    loc <- grep("^location:", hdrs, ignore.case = TRUE, value = TRUE)
-    if (!length(loc)) return("latest")
-    tag <- sub(".*/tag/([^[:space:]\r\n]+).*", "\\1", loc[1])
+    if (is.null(resp)) return("latest")
+    loc <- httr2::resp_header(resp, "location")
+    if (is.null(loc) || !nzchar(loc)) return("latest")
+    tag <- sub(".*/tag/([^[:space:]\r\n]+).*", "\\1", loc)
     if (!nzchar(tag)) "latest" else tag
   }
 
   data_tag  <- resolve_latest_tag()
   geo_tag   <- gsub(" ", "_", geo)
-  cache_dir <- tools::R_user_dir("ReproduceYostIndex", which = "cache")
+  cache_dir <- tools::R_user_dir("ReproducibleYostIndex", which = "cache")
 
   # CSV — always pulled from /releases/latest/download/ so users get the
   # current release without bumping the package.
   csv_file   <- sprintf("yost_%s_%s_%d.csv.gz", geo_tag, scope, year)
   csv_url    <- sprintf(
-    "https://github.com/HanLabCollaboration/ReproduceYostIndex-data/releases/latest/download/%s",
+    "https://github.com/HanLabCollaboration/ReproducibleYostIndex-data/releases/latest/download/%s",
     csv_file
   )
   csv_path   <- file.path(cache_dir, data_tag, csv_file)
@@ -172,7 +176,7 @@ getYostIndex <- function(
   # GeoPackage (scope-independent: geometry is the same for national and state)
   gpkg_file  <- sprintf("yost_%s_%d.gpkg", geo_tag, year)
   gpkg_url   <- sprintf(
-    "https://github.com/HanLabCollaboration/ReproduceYostIndex-data/releases/latest/download/%s",
+    "https://github.com/HanLabCollaboration/ReproducibleYostIndex-data/releases/latest/download/%s",
     gpkg_file
   )
   gpkg_path  <- file.path(cache_dir, data_tag, gpkg_file)
@@ -187,7 +191,7 @@ getYostIndex <- function(
         utils::download.file(url, destfile = local_path, quiet = quiet, mode = "wb"),
         error = function(e) stop(glue::glue(
           "Failed to download '{label}'. Check your internet connection or ",
-          "visit https://github.com/HanLabCollaboration/ReproduceYostIndex-data/releases ",
+          "visit https://github.com/HanLabCollaboration/ReproducibleYostIndex-data/releases ",
           "to verify the file exists."
         ))
       )
@@ -240,6 +244,12 @@ getYostIndex <- function(
   }
 
   # --- 7. Return ---------------------------------------------------------------
+
+  quintile_cols <- grep("Quintile", names(df), value = TRUE)
+  df <- dplyr::mutate(df, dplyr::across(
+    dplyr::all_of(quintile_cols),
+    ~ factor(.x, levels = 1:5, ordered = TRUE)
+  ))
 
   dplyr::arrange(df, GEOID)
 }

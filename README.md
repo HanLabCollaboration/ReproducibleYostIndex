@@ -2,16 +2,16 @@
 <!-- badges: start -->
 
 [![Codecov test
-coverage](https://codecov.io/gh/HanLabCollaboration/ReproduceYostIndex/graph/badge.svg)](https://app.codecov.io/gh/HanLabCollaboration/ReproduceYostIndex)
+coverage](https://codecov.io/gh/HanLabCollaboration/ReproducibleYostIndex/graph/badge.svg)](https://app.codecov.io/gh/HanLabCollaboration/ReproducibleYostIndex)
 <!-- badges: end -->
 
-# ReproduceYostIndex
+# ReproducibleYostIndex
 
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![License:
 MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-The goal of `ReproduceYostIndex` is to provide a simple, tidy interface
+The goal of `ReproducibleYostIndex` is to provide a simple, tidy interface
 for calculating the **Yost Index**, a composite measure of
 neighborhood-level socioeconomic status (SES), using data from the US
 Census Bureau’s American Community Survey (ACS).
@@ -45,18 +45,18 @@ component variables:
 
 ## Installation
 
-You can install the development version of ReproduceYostIndex from
-[GitHub](https://github.com/HanLabCollaboration/ReproduceYostIndex)
+You can install the development version of ReproducibleYostIndex from
+[GitHub](https://github.com/HanLabCollaboration/ReproducibleYostIndex)
 with:
 
 ``` r
 # install.packages("pak")
-# pak::pak("HanLabCollaboration/ReproduceYostIndex")
+# pak::pak("HanLabCollaboration/ReproducibleYostIndex")
 ```
 
 ## Example
 
-To use `ReproduceYostIndex`, you will also need a **Census API Key**.
+To use `ReproducibleYostIndex`, you will also need a **Census API Key**.
 You can get one [here](https://api.census.gov/data/key_signup.html) and
 install it using
 `tidycensus::census_api_key("YOUR_KEY_HERE", install = TRUE)`.
@@ -65,7 +65,7 @@ This example computes the Yost Index for all counties in California for
 the year 2022.
 
 ``` r
-library(ReproduceYostIndex)
+library(ReproducibleYostIndex)
 library(dplyr)
 
 # Compute the Yost Index for California counties
