@@ -1,0 +1,16 @@
+url: https://hanlabcollaboration.github.io/ReproducibleYostIndex/
+
+template:
+  bootstrap: 5
+
+navbar:
+  structure:
+    left:  [intro, reference, articles, news]
+    right: [search, github]
+
+articles:
+- title: Vignettes
+  navbar: ~
+  contents:
+  - introduction-to-ReproducibleYostIndex
+  - walkthrough-ReproducibleYostIndex
