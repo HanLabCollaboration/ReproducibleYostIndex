@@ -122,6 +122,7 @@ computeYostIndex <- function(
 
 geo <- rlang::arg_match(geo, values = c("state", "county",
                                         "tract", "block group", "cbg"))
+if (geo == "cbg") geo <- "block group"
 rescale <- rlang::arg_match(rescale, values = c("rank", "standardize"))
 return_format <- rlang::arg_match(return_format, values = c("minimal", 
                                                             "detailed"))
