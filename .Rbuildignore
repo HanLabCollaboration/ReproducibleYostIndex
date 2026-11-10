@@ -9,3 +9,7 @@
 ^vignettes/_freeze$
 ^vignettes/.*\.qmd$
 ^vignettes/.*\.html$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^\.github$
