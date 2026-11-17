@@ -112,7 +112,7 @@ calculateYostVars <- function(data, acs_vars, stabilize_sub = FALSE) {
         edu1_moe     = moe3(data = data, num = acs_vars$var_Edu_P1,   denom = acs_vars$var_Edu_denom) * 100,
         edu2_moe     = moe3(data = data, num = acs_vars$var_Edu_P2,   denom = acs_vars$var_Edu_denom) * 100,
         edu3_moe     = moe3(data = data, num = acs_vars$var_Edu_P3,   denom = acs_vars$var_Edu_denom) * 100,
-        educ_moe     = sqrt((16 * edu1_moe)^2 + (12 * edu2_moe)^2 + (9 * edu3_moe)^2),
+        educ_moe     = sqrt((9 * edu1_moe)^2 + (12 * edu2_moe)^2 + (16 * edu3_moe)^2),
         poverty150_moe = moe3(data = data, num = acs_vars$var_RATIOP, denom = acs_vars$var_RATIOP_pop) * 100,
         rent_moe     = moe1(data = data, var = acs_vars$var_MGRRNT),
         hval_moe     = moe1(data = data, var = acs_vars$var_MVALUE)
