@@ -111,6 +111,12 @@ yost_ca_county$df_yost %>%
 # yost_ca_county$obj_factor
 ```
 
+## Pre-computed data and how it is regenerated
+
+`getYostIndex()` downloads pre-computed Yost Index tables (county and tract from 2011, block group from 2013; national and state scopes; raw, stabilized, imputed, and stabilized + imputed) from the [ReproducibleYostIndex-data releases](https://github.com/HanLabCollaboration/ReproducibleYostIndex-data/releases).
+
+The scripts that regenerate every file in a release are in [`batch/hpc/`](batch/hpc/). They are a SLURM array job that calls `computeYostIndex()` once for each combination. They are kept in this repository for reproducibility but are not part of the installed package. See [`batch/hpc/README.md`](batch/hpc/README.md) for setup, running, and publishing steps.
+
 ## License
 
 This package is available under the MIT License.

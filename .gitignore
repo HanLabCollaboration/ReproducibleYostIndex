@@ -15,8 +15,9 @@ inst/doc
 # ignore the editing_details
 editing_details.R
 
-# batch pipeline: HPC scripts, pre-computed output, and logs
-batch/
+# batch output and logs stay local; the scripts in batch/hpc/ are tracked
+batch/*
+!batch/hpc/
 
 # Claude project instructions
 CLAUDE.md
